@@ -3,11 +3,16 @@
 namespace App\Http\Controllers;
 
 use App\Models\Game;
+use App\Models\TrackedGame;
 use App\Services\SteamService;
-use Illuminate\Http\Request;
 
 class TrackedGameController extends Controller
 {
+    /*
+        Получаем детали игры из Steam. Находим или
+        создаем игру. Добавляем связь для текущего
+        пользователя.
+    */
     public function store(string $appId)
     {
         $details = SteamService::getDetails($appId);
@@ -22,11 +27,21 @@ class TrackedGameController extends Controller
                 'image_url' => $details['image_url'],
                 'genre' => implode(', ', $details['genres']),
                 'current_price' => $details['price'],
+                'currency' => $details['currency']
             ]
         );
 
         auth()->user()->trackedGames()->firstOrCreate(['game_id' => $game->id]);
 
         return back()->with('success', 'Game is now being tracked');
+    }
+
+    public function destroy(TrackedGame $trackedGame)
+    {
+        if ($trackedGame->user_id !== auth()->id()) abort(403);
+
+        $trackedGame->delete();
+
+        return back()->with('success', 'Game removed from tracking');
     }
 }

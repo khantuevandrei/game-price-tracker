@@ -5,7 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 
-#[Fillable(['title', 'steam_app_id', 'description', 'image_url', 'genre', 'current_price'])]
+#[Fillable(['title', 'steam_app_id', 'description', 'image_url', 'genre', 'current_price', 'currency'])]
 class Game extends Model
 {
     public function trackedGame()

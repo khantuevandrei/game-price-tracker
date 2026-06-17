@@ -6,6 +6,10 @@ use Illuminate\Support\Facades\Http;
 
 class SteamService
 {
+    /*
+        Парсим HTML страницу поиска Steam. Извлекаем id и
+        title игр. Возвращаем массив.
+    */
     public static function search(string $query): array
     {
         $term = urlencode(trim($query));
@@ -18,10 +22,8 @@ class SteamService
 
         $html = $response->body();
 
-        // Ищем по app_id
         preg_match_all('/data-ds-appid="(\d+)"/', $html, $idMatches);
 
-        // Находим названия
         preg_match_all('/<span class="title">(.*?)<\/span>/', $html, $titleMatches);
 
         $ids = $idMatches[1] ?? [];
@@ -39,6 +41,10 @@ class SteamService
         return $result;
     }
 
+    /*
+        Ищем по id через API Steam. Из JSON извлекаем
+        детали игры. Возвращаем массив.
+    */
     public static function getDetails(int $appId): array
     {
         $url = "https://store.steampowered.com/api/appdetails?appids={$appId}";
