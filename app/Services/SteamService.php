@@ -49,19 +49,18 @@ class SteamService
 
         $data = $response->json();
 
-        if ($data['success'] !== true) return [];
+        if ($data[$appId]['success'] !== true) return [];
 
-        $data = $data[$appId];
-        $data = $data['data'];
+        $game = $data[$appId]['data'];
 
         $result = [
-            'steam_app_id' => $data['steam_appid'],
-            'title' => $data['name'],
-            'description' => $data['short_description'],
-            'genres' => $data['genres'],
-            'price' => $data['price_overview']['final'],
-            'currency' => $data['price_overview']['currency'],
-            'image_url' => $data['header_image']
+            'steam_app_id' => $game['steam_appid'],
+            'title' => $game['name'],
+            'description' => $game['short_description'],
+            'genres' => array_column($game['genres'] ?? [], 'description'),
+            'price' => $game['price_overview']['final'] ?? null,
+            'currency' => $game['price_overview']['currency'] ?? null,
+            'image_url' => $game['header_image']
         ];
 
         return $result;
