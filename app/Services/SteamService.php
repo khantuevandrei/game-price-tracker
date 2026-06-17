@@ -31,7 +31,7 @@ class SteamService
 
         foreach ($ids as $index => $id) {
             $result[] = [
-                'steam_app_id' => (int) $id ?? null,
+                'id' => (int) $id ?? null,
                 'title' => html_entity_decode($titles[$index])
             ];
         }
@@ -54,7 +54,7 @@ class SteamService
         $game = $data[$appId]['data'];
 
         $result = [
-            'steam_app_id' => $game['steam_appid'],
+            'id' => $game['steam_appid'],
             'title' => $game['name'],
             'description' => $game['short_description'],
             'genres' => array_column($game['genres'] ?? [], 'description'),

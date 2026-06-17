@@ -11,11 +11,11 @@
         @foreach ($results as $game)
         <div class="card">
             <h3>{{ $game['title'] }}</h3>
-            <img src="{{ $game['image_url'] }}" alt="">
-            <form action="/games/{{ $game['steam_app_id'] }}/track" method="POST">
+            <form action="/games/{{ $game['id'] }}/track" method="POST">
                 @csrf
                 <button>Track</button>
             </form>
+            <a href="/games/{{ $game['id'] }}">View</a>
         </div>
         @endforeach
         @endif

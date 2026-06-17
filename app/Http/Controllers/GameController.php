@@ -2,8 +2,9 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Http\Request;
 use App\Services\SteamService;
+
+use function PHPUnit\Framework\isEmpty;
 
 class GameController extends Controller
 {
@@ -15,5 +16,14 @@ class GameController extends Controller
         if ($query) $result = SteamService::search($query);
 
         return view('games.index', ['results' => $result]);
+    }
+
+    public function show(string $appId)
+    {
+        $result = SteamService::getDetails((int) $appId);
+
+        if (empty($result)) abort(404);
+
+        return view('games.show', ['game' => $result]);
     }
 }
