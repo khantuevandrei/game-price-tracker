@@ -17,6 +17,11 @@
         <a href="/register">Register</a>
         @endauth
     </nav>
+
+    @if (session('success'))
+    <div style="color: green;">{{ session('success') }}</div>
+    @endif
+
     <hr>
 
     {{ $slot }}
