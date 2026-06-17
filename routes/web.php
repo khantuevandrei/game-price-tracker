@@ -18,6 +18,8 @@ Route::middleware('auth')->group(function () {
     Route::get('/games/{appId}', [GameController::class, 'show']);
     Route::post('/games/{appId}/track', [TrackedGameController::class, 'store']);
 
+    Route::get('/tracked/{trackedGame}/edit', [TrackedGameController::class, 'edit']);
+    Route::patch('/tracked/{trackedGame}', [TrackedGameController::class, 'update']);
     Route::delete('/tracked/{trackedGame}', [TrackedGameController::class, 'destroy']);
 });
 
