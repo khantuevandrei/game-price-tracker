@@ -47,7 +47,7 @@ class SteamService
     */
     public static function getDetails(int $appId): array
     {
-        $url = "https://store.steampowered.com/api/appdetails?appids={$appId}";
+        $url = "https://store.steampowered.com/api/appdetails?appids={$appId}&cc=US";
 
         $response = Http::get($url);
 
