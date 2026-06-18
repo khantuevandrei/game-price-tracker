@@ -2,6 +2,7 @@
 
 namespace App\Console\Commands;
 
+use App\Jobs\SendPriceAlert;
 use App\Models\Game;
 use App\Models\PriceHistory;
 use App\Models\TrackedGame;
@@ -14,9 +15,6 @@ use Illuminate\Console\Command;
 #[Description('Command description')]
 class FetchPrices extends Command
 {
-    /**
-     * Execute the console command.
-     */
     public function handle()
     {
         $gameIds = TrackedGame::query()->distinct()->pluck('game_id');
@@ -42,6 +40,17 @@ class FetchPrices extends Command
                 $game->update([
                     'current_price' => $newPrice
                 ]);
+
+                $trackedGames = TrackedGame::where('game_id', $game->id)
+                    ->whereNotNull('target_price')
+                    ->where('notify_email', true)
+                    ->where('target_price', '>', $newPrice)
+                    ->get();
+
+                foreach ($trackedGames as $trackedGame) {
+                    SendPriceAlert::dispatch($trackedGame, $newPrice);
+                    $this->info("Dispatched alert for {$trackedGame->user->email}");
+                }
 
                 $this->info("Updated {$game->title} - USD {$newPrice}");
             } else {
