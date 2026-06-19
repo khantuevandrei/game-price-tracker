@@ -17,20 +17,278 @@ use App\Models\Game;
 #[Description('Command description')]
 class TelegramPolling extends Command
 {
+    private function sendReply(string $chatId, string $reply): void
+    {
+        $token = env('TELEGRAM_BOT_TOKEN');
+
+        Http::post("https://api.telegram.org/bot{$token}/sendMessage", [
+            'chat_id' => $chatId,
+            'text' => $reply
+        ]);
+    }
+
+    private function getUser(string $chatId): ?User
+    {
+        return User::where('telegram_id', $chatId)->first();
+    }
+
+    private function getTrackedGames(User $user)
+    {
+        return $user->trackedGames()->with('game')->get();
+    }
+
+    private function handleStart(string $chatId, array $message): void
+    {
+        $user = $this->getUser($chatId);
+
+        if (!$user) {
+            $firstName = $message['chat']['first_name'] ?? '';
+            $lastName = $message['chat']['last_name'] ?? '';
+            $name = trim($firstName . ' ' . $lastName) ?: 'Telegram User';
+
+            $user = User::create([
+                'name' => $name,
+                'email' => 'tg_' . $chatId . '@telegram.local',
+                'password' => bcrypt(bin2hex(random_bytes(8))),
+                'telegram_id' => $chatId,
+            ]);
+        }
+
+        $reply = "Привет! Это бот для отслеживания цен на игры в Steam.\n\n
+            Доступные команды:\n
+            /start - приветствие\n
+            /email - привязать email\n
+            /search - найти игру\n
+            /track - отслеживать игру\n
+            /list - посмотреть отслеживаемые игры\n
+            /price - посмотреть информацию об игре\n
+            /set - установить цель по цене\n
+            /untrack - прекратить отслеживание\n
+            /help - напомнить команды";
+
+        $this->sendReply($chatId, $reply);
+    }
+
+    private function handleEmail(string $chatId): void
+    {
+        Cache::put('tg_state:' . $chatId, 'awaiting_email', 300);
+        $reply = 'Введи свой email.';
+        $this->sendReply($chatId, $reply);
+    }
+
+    private function handleSearch(string $chatId): void
+    {
+        Cache::put('tg_state:' . $chatId, 'awaiting_search', 300);
+        $reply = 'Введи название игры.';
+        $this->sendReply($chatId, $reply);
+    }
+
+    private function handleTrack(string $chatId, string $text): void
+    {
+        $parts = explode(' ', $text);
+        $index = (int) ($parts[1] ?? 0) - 1;
+
+        if ($index < 0) {
+            $reply = 'Использование: /track 1';
+            $this->sendReply($chatId, $reply);
+            return;
+        }
+
+        $results = Cache::get('tg_search:' . $chatId);
+
+        if (!$results || !isset($results[$index])) {
+            $reply = 'Сначала выполни поиск через /search';
+            $this->sendReply($chatId, $reply);
+            return;
+        }
+
+        $game = $results[$index];
+        $appId = $game['id'];
+
+        $details = SteamService::getDetails($appId);
+
+        if (empty($details)) {
+            $reply = 'Не удалось получить данные игры.';
+            $this->sendReply($chatId, $reply);
+            return;
+        }
+
+        if (empty($details['price'])) {
+            $reply = 'Это бесплатная игра. Отслеживание не требуется.';
+            $this->sendReply($chatId, $reply);
+            return;
+        }
+
+        $user = $this->getUser($chatId);
+
+        $gameModel = Game::firstOrCreate(
+            ['steam_app_id' => $appId],
+            [
+                'title' => $details['title'],
+                'description' => $details['description'],
+                'image_url' => $details['image_url'],
+                'genre' => implode(', ', $details['genres']),
+                'current_price' => $details['price'],
+                'currency' => $details['currency']
+            ]
+        );
+
+        $user->trackedGames()->firstOrCreate(['game_id' => $gameModel->id]);
+
+        $reply = "{$game['title']} добавлено в отслеживание.";
+        $this->sendReply($chatId, $reply);
+    }
+
+    private function handleList(string $chatId): void
+    {
+        $user = $this->getUser($chatId);
+
+        $trackedGames = $this->getTrackedGames($user);
+
+        if ($trackedGames->isEmpty()) {
+            $reply = 'Игры не отслеживаются.';
+            $this->sendReply($chatId, $reply);
+            return;
+        }
+
+        $reply = "Отслеживаемые игры:\n\n";
+        foreach ($trackedGames as $i => $t) {
+            $num = $i + 1;
+            $title = $t->game->title;
+            $price = $t->game->current_price ? '$' . number_format($t->game->current_price, 2) : 'N/A';
+            $target = $t->target_price ? '$' . number_format($t->target_price, 2) : 'не задано';
+            $reply .= "{$num}. {$title}\n Цена: {$price} | Цель: {$target}\n\n";
+        }
+
+        $this->sendReply($chatId, $reply);
+    }
+
+    private function handlePrice(string $chatId, string $text): void
+    {
+        $parts = explode(' ', $text);
+        $index = (int) ($parts[1] ?? 0) - 1;
+
+        if ($index < 0) {
+            $reply = 'Пример использования: /price 1';
+            $this->sendReply($chatId, $reply);
+            return;
+        }
+
+        $user = $this->getUser($chatId);
+        $trackedGames = $this->getTrackedGames($user);
+
+        if ($trackedGames->isEmpty()) {
+            $reply = 'Ты не отслеживаешь ни одну игру.';
+            $this->sendReply($chatId, $reply);
+            return;
+        }
+
+        if (!isset($trackedGames[$index])) {
+            $reply = 'Неверный номер. Используй /list чтобы увидеть номера.';
+            $this->sendReply($chatId, $reply);
+            return;
+        }
+
+        $t = $trackedGames[$index];
+        $title = $t->game->title;
+        $price = $t->game->current_price ? '$' . number_format($t->game->current_price, 2) : 'N/A';
+        $target = $t->target_price ? '$' . number_format($t->target_price, 2) : 'не задано';
+
+        $reply = "{$title}\nЦена: {$price}\nЦель: {$target}";
+        $this->sendReply($chatId, $reply);
+    }
+
+    private function handleSet(string $chatId, string $text): void
+    {
+        $parts = explode(' ', $text);
+        $index = (int) ($parts[1] ?? 0) - 1;
+        $targetPrice = (float) ($parts[2] ?? 0);
+
+        if ($index < 0 || $targetPrice <= 0) {
+            $reply = 'Пример использования: /set 1 15.99';
+            $this->sendReply($chatId, $reply);
+            return;
+        }
+
+        $user = $this->getUser($chatId);
+        $trackedGames = $this->getTrackedGames($user);
+
+        if (!isset($trackedGames[$index])) {
+            $reply = 'Неверный номер. Используй /list чтобы увидеть номера.';
+            $this->sendReply($chatId, $reply);
+            return;
+        }
+
+        $trackedGame = $trackedGames[$index];
+        $trackedGame->update(['target_price' => $targetPrice]);
+
+        $reply = "Цель для {$trackedGame->game->title} установлена: \$" . number_format($targetPrice, 2);
+        $this->sendReply($chatId, $reply);
+    }
+
+    private function handleUntrack(string $chatId, string $text): void
+    {
+        $parts = explode(' ', $text);
+        $index = (int) ($parts[1] ?? 0) - 1;
+
+        if ($index < 0) {
+            $reply = 'Пример использования: /untrack 1';
+            $this->sendReply($chatId, $reply);
+            return;
+        }
+
+        $user = $this->getUser($chatId);
+        $trackedGames = $this->getTrackedGames($user);
+
+        if ($trackedGames->isEmpty()) {
+            $reply = 'Ты не отслеживаешь ни одну игру.';
+            $this->sendReply($chatId, $reply);
+            return;
+        }
+
+        if (!isset($trackedGames[$index])) {
+            $reply = 'Неверный номер. Используй /list чтобы увидеть номера.';
+            $this->sendReply($chatId, $reply);
+            return;
+        }
+
+        $trackedGame = $trackedGames[$index];
+        $trackedGame->delete();
+
+        $reply = "{$trackedGame->game->title} удалена из отслеживания.";
+        $this->sendReply($chatId, $reply);
+    }
+
+    private function handleHelp(string $chatId): void
+    {
+        $reply = "Доступные команды:\n
+            /start - приветствие\n
+            /email - привязать email\n
+            /search - найти игру\n
+            /track - отслеживать игру\n
+            /list - посмотреть отслеживаемые игры\n
+            /price - посмотреть информацию об игре\n
+            /set - установить цель по цене\n
+            /untrack - прекратить отслеживание\n
+            /help - напомнить команды";
+        $this->sendReply($chatId, $reply);
+    }
+
     public function handle()
     {
+        // 1. Получение обновлений от Telegram
         $token = env('TELEGRAM_BOT_TOKEN');
         $offset = Cache::get('tg_offset', 0);
         $url = "https://api.telegram.org/bot{$token}/getUpdates?offset=" . ($offset + 1);
-        $replyUrl = "https://api.telegram.org/bot{$token}/sendMessage";
-
         $response = Http::get($url);
 
+        // 2. Проверка успешности запроса
         if (!$response->ok()) {
             $this->error('Telegram API error');
             return Command::FAILURE;
         }
 
+        // 3. Если нет новых сообщений — выход
         $updates = $response->json('result');
 
         if (empty($updates)) {
@@ -38,6 +296,7 @@ class TelegramPolling extends Command
             return Command::SUCCESS;
         }
 
+        // 4. Обработка каждого сообщения
         foreach ($updates as $update) {
             $message = $update['message'] ?? null;
             if (!$message) continue;
@@ -47,50 +306,43 @@ class TelegramPolling extends Command
 
             $state = Cache::get('tg_state:' . $chatId);
 
+            // 4.1. Проверка состояния пользователя
+
+            // Бот ждёт, что пользователь введёт email
             if ($state === 'awaiting_email') {
                 Cache::forget('tg_state:' . $chatId);
 
-                // Валидация email
                 if (!filter_var($text, FILTER_VALIDATE_EMAIL)) {
-                    Http::post($replyUrl, [
-                        'chat_id' => $chatId,
-                        'text' => 'Неверный формат email. Попробуй /email еще раз.'
-                    ]);
+                    $message = 'Неверный формат email. Попробуй /email еще раз.';
+                    $this->sendReply($chatId, $message);
                     continue;
                 }
 
-                // Генерация кода
                 $code = random_int(100000, 999999);
 
-                // Сохраняем в кеш
                 Cache::put("email_verify:{$code}", [
                     'email' => $text,
                     'chat_id' => $chatId
                 ], 600);
 
-                // Отправляем письмо
                 Mail::to($text)->send(new VerificationCodeMail($code));
 
-                // Меняем состояние
                 Cache::put('tg_state:' . $chatId, 'awaiting_code', 600);
 
-                Http::post($replyUrl, [
-                    'chat_id' => $chatId,
-                    'text' => 'На твой email отправлен код. Введи его.'
-                ]);
+                $reply = 'На твой email отправлен код. Введи его.';
+                $this->sendReply($chatId, $reply);
 
                 continue;
             }
 
+            // Бот ждёт код подтверждения
             if ($state === 'awaiting_code') {
                 $code = trim($text);
                 $data = Cache::get("email_verify:{$code}");
 
                 if (!$data || $data['chat_id'] !== $chatId) {
-                    Http::post($replyUrl, [
-                        'chat_id' => $chatId,
-                        'text' => 'Неверный код. Попробуй еще раз или начни заново с /email'
-                    ]);
+                    $reply = 'Неверный код. Попробуй еще раз или начни заново с /email';
+                    $this->sendReply($chatId, $reply);
                     continue;
                 }
 
@@ -98,325 +350,69 @@ class TelegramPolling extends Command
                 Cache::forget("email_verify:{$code}");
 
                 $email = $data['email'];
-                $user = User::where('email', $email)->first();
+                $user = $this->getUser($chatId);
 
-                if (!$user) {
-                    $password = substr(bin2hex(random_bytes(4)), 0, 8);
-                    $firstName = $message['chat']['first_name'] ?? '';
-                    $lastName = $message['chat']['last_name'] ?? '';
-                    $name = trim($firstName . ' ' . $lastName) ?: 'Telegram User';
+                $user->update(['email' => $email, 'telegram_id' => $chatId]);
 
-                    $user = User::create([
-                        'name' => $name,
-                        'email' => $email,
-                        'password' => bcrypt($password),
-                        'telegram_id' => $chatId
-                    ]);
-
-                    Http::post($replyUrl, [
-                        'chat_id' => $chatId,
-                        'text' => "Почта привязана. Для доступа на сайт используй пароль: {$password}"
-                    ]);
-                } else {
-                    $user->update(['telegram_id' => $chatId]);
-                    Http::post($replyUrl, [
-                        'chat_id' => $chatId,
-                        'text' => 'Почта привязана.'
-                    ]);
-                }
+                $reply = 'Почта привязана.';
+                $this->sendReply($chatId, $reply);
 
                 continue;
             }
 
+            // Бот ждёт название игры для поиска
             if ($state === 'awaiting_search') {
                 Cache::forget('tg_state:' . $chatId);
 
                 $results = SteamService::search($text);
 
                 if (empty($results)) {
-                    Http::post($replyUrl, [
-                        'chat_id' => $chatId,
-                        'text' => 'Ничего не найдено.'
-                    ]);
+                    $reply = 'Ничего не найдено.';
+                    $this->sendReply($chatId, $reply);
                     continue;
                 }
 
                 $results = array_slice($results, 0, 5);
                 Cache::put('tg_search:' . $chatId, $results, 300);
 
-                $response = '';
+                $reply = '';
+
                 foreach ($results as $i => $game) {
                     $num = $i + 1;
-                    $response .= "{$num}. {$game['title']}\n";
+                    $reply .= "{$num}. {$game['title']}\n";
                 }
-                $response .= "\nВведи /track 1 чтобы добавить в отслеживание.";
 
-                Http::post($replyUrl, [
-                    'chat_id' => $chatId,
-                    'text' => $response
-                ]);
+                $reply .= "\nВведи /track 1 чтобы добавить в отслеживание.";
+
+                $this->sendReply($chatId, $reply);
                 continue;
             }
 
+            // 4.2. Обработка команд
             if (str_starts_with($text, '/start')) {
-                $user = User::where('telegram_id', $chatId)->first();
-
-                if (!$user) {
-                    $firstName = $message['chat']['first_name'] ?? '';
-                    $lastName = $message['chat']['last_name'] ?? '';
-                    $name = trim($firstName . ' ' . $lastName) ?: 'Telegram User';
-
-                    $user = User::create([
-                        'name' => $name,
-                        'email' => 'tg_' . $chatId . '@telegram.local',
-                        'password' => bcrypt(bin2hex(random_bytes(8))),
-                        'telegram_id' => $chatId,
-                    ]);
-                }
-
-                Http::post($replyUrl, [
-                    'chat_id' => $chatId,
-                    'text' => "Привет! Это бот для отслеживания цен на игры в Steam.\n\n
-                    Доступные команды:\n
-                    /start - приветствие\n
-                    /email - привязать email\n
-                    /search - найти игру\n
-                    /track - отслеживать игру\n
-                    /list - посмотреть отслеживаемые игры\n
-                    /price - посмотреть информацию об игре\n
-                    /set - установить цель по цене\n
-                    /untrack - прекратить отслеживание\n
-                    /help - напомнить команды"
-                ]);
+                $this->handleStart($chatId, $message);
             } elseif (str_starts_with($text, '/email')) {
-                Cache::put('tg_state:' . $chatId, 'awaiting_email', 300);
-                Http::post($replyUrl, [
-                    'chat_id' => $chatId,
-                    'text' => 'Введи свой email.'
-                ]);
+                $this->handleEmail($chatId);
             } elseif (str_starts_with($text, '/search')) {
-                Cache::put('tg_state:' . $chatId, 'awaiting_search', 300);
-                Http::post($replyUrl, [
-                    'chat_id' => $chatId,
-                    'text' => 'Введи название игры.'
-                ]);
+                $this->handleSearch($chatId);
             } elseif (str_starts_with($text, '/track')) {
-                $parts = explode(' ', $text);
-                $index = (int) ($parts[1] ?? 0) - 1;
-
-                if ($index < 0) {
-                    Http::post($replyUrl, [
-                        'chat_id' => $chatId,
-                        'text' => 'Использование: /track 1'
-                    ]);
-                    continue;
-                }
-
-                $results = Cache::get('tg_search:' . $chatId);
-
-                if (!$results || !isset($results[$index])) {
-                    Http::post($replyUrl, [
-                        'chat_id' => $chatId,
-                        'text' => 'Сначала выполни поиск через /search'
-                    ]);
-                    continue;
-                }
-
-                $game = $results[$index];
-                $appId = $game['id'];
-
-                $details = SteamService::getDetails($appId);
-
-                if (empty($details)) {
-                    Http::post($replyUrl, [
-                        'chat_id' => $chatId,
-                        'text' => 'Не удалось получить данные игры.'
-                    ]);
-                    continue;
-                }
-
-                if (empty($details['price'])) {
-                    Http::post($replyUrl, [
-                        'chat_id' => $chatId,
-                        'text' => 'Это бесплатная игра. Отслеживание не требуется.'
-                    ]);
-                    continue;
-                }
-
-                $user = User::where('telegram_id', $chatId)->first();
-
-                $gameModel = Game::firstOrCreate(
-                    ['steam_app_id' => $appId],
-                    [
-                        'title' => $details['title'],
-                        'description' => $details['description'],
-                        'image_url' => $details['image_url'],
-                        'genre' => implode(', ', $details['genres']),
-                        'current_price' => $details['price'],
-                        'currency' => $details['currency']
-                    ]
-                );
-
-                $user->trackedGames()->firstOrCreate(['game_id' => $gameModel->id]);
-
-                Http::post($replyUrl, [
-                    'chat_id' => $chatId,
-                    'text' => "{$game['title']} добавлено в отслеживание."
-                ]);
+                $this->handleTrack($chatId, $text);
             } elseif (str_starts_with($text, '/list')) {
-                $user = User::where('telegram_id', $chatId)->first();
-
-                $trackedGames = $user->trackedGames()->with('game')->get();
-
-                if ($trackedGames->isEmpty()) {
-                    Http::post($replyUrl, [
-                        'chat_id' => $chatId,
-                        'text' => 'Ты не отслеживаешь ни одну игру.'
-                    ]);
-                    continue;
-                }
-
-                $response = "Отслеживаемые игры:\n\n";
-                foreach ($trackedGames as $i => $t) {
-                    $num = $i + 1;
-                    $title = $t->game->title;
-                    $price = $t->game->current_price ? '$' . number_format($t->game->current_price, 2) : 'N/A';
-                    $target = $t->target_price ? '$' . number_format($t->target_price, 2) : 'не задано';
-                    $response .= "{$num}. {$title}\n Цена: {$price} | Цель: {$target}\n\n";
-                }
-
-                Http::post($replyUrl, [
-                    'chat_id' => $chatId,
-                    'text' => $response
-                ]);
+                $this->handleList($chatId);
             } elseif (str_starts_with($text, '/price')) {
-                $parts = explode(' ', $text);
-                $index = (int) ($parts[1] ?? 0) - 1;
-
-                if ($index < 0) {
-                    Http::post($replyUrl, [
-                        'chat_id' => $chatId,
-                        'text' => 'Пример использования: /price 1'
-                    ]);
-                    continue;
-                }
-
-                $user = User::where('telegram_id', $chatId)->first();
-                $trackedGames = $user->trackedGames()->with('game')->get();
-
-                if ($trackedGames->isEmpty()) {
-                    Http::post($replyUrl, [
-                        'chat_id' => $chatId,
-                        'text' => 'Ты не отслеживаешь ни одну игру.'
-                    ]);
-                    continue;
-                }
-
-                if (!isset($trackedGames[$index])) {
-                    Http::post($replyUrl, [
-                        'chat_id' => $chatId,
-                        'text' => 'Неверный номер. Используй /list чтобы увидеть номера.'
-                    ]);
-                    continue;
-                }
-
-                $t = $trackedGames[$index];
-                $title = $t->game->title;
-                $price = $t->game->current_price ? '$' . number_format($t->game->current_price, 2) : 'N/A';
-                $target = $t->target_price ? '$' . number_format($t->target_price, 2) : 'не задано';
-
-                Http::post($replyUrl, [
-                    'chat_id' => $chatId,
-                    'text' => "{$title}\nЦена: {$price}\nЦель: {$target}"
-                ]);
+                $this->handlePrice($chatId, $text);
             } elseif (str_starts_with($text, '/set')) {
-                $parts = explode(' ', $text);
-                $index = (int) ($parts[1] ?? 0) - 1;
-                $targetPrice = (float) ($parts[2] ?? 0);
-
-                if ($index < 0 || $targetPrice <= 0) {
-                    Http::post($replyUrl, [
-                        'chat_id' => $chatId,
-                        'text' => 'Пример использования: /set 1 15.99'
-                    ]);
-                    continue;
-                }
-
-                $user = User::where('telegram_id', $chatId)->first();
-                $trackedGames = $user->trackedGames()->with('game')->get();
-
-                if (!isset($trackedGames[$index])) {
-                    Http::post($replyUrl, [
-                        'chat_id' => $chatId,
-                        'text' => 'Неверный номер. Используй /list чтобы увидеть номера.'
-                    ]);
-                    continue;
-                }
-
-                $trackedGame = $trackedGames[$index];
-                $trackedGame->update(['target_price' => $targetPrice]);
-
-                Http::post($replyUrl, [
-                    'chat_id' => $chatId,
-                    'text' => "Цель для {$trackedGame->game->title} установлена: \$" . number_format($targetPrice, 2)
-                ]);
+                $this->handleSet($chatId, $text);
             } elseif (str_starts_with($text, '/untrack')) {
-                $parts = explode(' ', $text);
-                $index = (int) ($parts[1] ?? 0) - 1;
-
-                if ($index < 0) {
-                    Http::post($replyUrl, [
-                        'chat_id' => $chatId,
-                        'text' => 'Пример использования: /untrack 1'
-                    ]);
-                    continue;
-                }
-
-                $user = User::where('telegram_id', $chatId)->first();
-                $trackedGames = $user->trackedGames()->with('game')->get();
-
-                if ($trackedGames->isEmpty()) {
-                    Http::post($replyUrl, [
-                        'chat_id' => $chatId,
-                        'text' => 'Ты не отслеживаешь ни одну игру.'
-                    ]);
-                    continue;
-                }
-
-                if (!isset($trackedGames[$index])) {
-                    Http::post($replyUrl, [
-                        'chat_id' => $chatId,
-                        'text' => 'Неверный номер. Используй /list чтобы увидеть номера.'
-                    ]);
-                    continue;
-                }
-
-                $trackedGame = $trackedGames[$index];
-                $trackedGame->delete();
-
-                Http::post($replyUrl, [
-                    'chat_id' => $chatId,
-                    'text' => "{$trackedGame->game->title} удалена из отслеживания."
-                ]);
+                $this->handleUntrack($chatId, $text);
             } elseif (str_starts_with($text, '/help')) {
-                Http::post($replyUrl, [
-                    'chat_id' => $chatId,
-                    'text' => "Доступные команды:\n
-                    /start - приветствие\n
-                    /email - привязать email\n
-                    /search - найти игру\n
-                    /track - отслеживать игру\n
-                    /list - посмотреть отслеживаемые игры\n
-                    /price - посмотреть информацию об игре\n
-                    /set - установить цель по цене\n
-                    /untrack - прекратить отслеживание\n
-                    /help - напомнить команды"
-                ]);
+                $this->handleHelp($chatId);
             }
 
             $this->info("Chat: {$chatId} | Message: {$text}");
         }
 
+        // 5. Сохранение последнего обработанного update_id
         if (!empty($updates)) {
             $lastUpdate = end($updates);
             Cache::put('tg_offset', $lastUpdate['update_id'], 86400);
