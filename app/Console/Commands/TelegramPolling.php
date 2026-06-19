@@ -71,8 +71,17 @@ class TelegramPolling extends Command
 
     private function handleEmail(string $chatId): void
     {
+        $user = $this->getUser($chatId);
+        $currentEmail = $user->email ?? null;
+
         Cache::put('tg_state:' . $chatId, 'awaiting_email', 300);
-        $reply = 'Введи свой email.';
+
+        if ($currentEmail && !str_starts_with($currentEmail, 'tg_')) {
+            $reply = "Твой текущий email: {$currentEmail}\nВведи новый email для смены.";
+        } else {
+            $reply = 'Введи свой email.';
+        }
+
         $this->sendReply($chatId, $reply);
     }
 
