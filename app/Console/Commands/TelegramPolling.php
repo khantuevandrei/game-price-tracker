@@ -280,7 +280,7 @@ class TelegramPolling extends Command
                 foreach ($trackedGames as $i => $t) {
                     $num = $i + 1;
                     $title = $t->game->title;
-                    $price = $t->game->current_price ? '$' . number_format($t->game->current_price / 100, 2) : 'N/A';
+                    $price = $t->game->current_price ? '$' . number_format($t->game->current_price, 2) : 'N/A';
                     $target = $t->target_price ? '$' . number_format($t->target_price, 2) : 'не задано';
                     $response .= "{$num}. {$title}\n Цена: {$price} | Цель: {$target}\n\n";
                 }
@@ -322,7 +322,7 @@ class TelegramPolling extends Command
 
                 $t = $trackedGames[$index];
                 $title = $t->game->title;
-                $price = $t->game->current_price ? '$' . number_format($t->game->current_price / 100, 2) : 'N/A';
+                $price = $t->game->current_price ? '$' . number_format($t->game->current_price, 2) : 'N/A';
                 $target = $t->target_price ? '$' . number_format($t->target_price, 2) : 'не задано';
 
                 Http::post($replyUrl, [
