@@ -12,7 +12,7 @@
         Genres: {{ implode(', ', $game['genres']) }}
     </p>
     <p>{!! $game['description'] !!}</p>
-    <form action="/games/{{ $game['id'] }}/track" method="POST">
+    <form action="/games/{{ $game['steam_app_id'] }}/track" method="POST">
         @csrf
         <button>Track</button>
     </form>

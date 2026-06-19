@@ -20,6 +20,10 @@ class TrackedGameController extends Controller
 
         if (empty($details)) abort(404);
 
+        if (empty($details['price'])) {
+            return back()->with('error', 'This game is free. No need for tracking');
+        }
+
         $game = Game::firstOrCreate(
             ['steam_app_id' => $appId],
             [

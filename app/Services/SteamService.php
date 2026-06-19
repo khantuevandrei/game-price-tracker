@@ -60,7 +60,7 @@ class SteamService
         $game = $data[$appId]['data'];
 
         $result = [
-            'id' => $game['steam_appid'],
+            'steam_app_id' => $game['steam_appid'],
             'title' => $game['name'],
             'description' => $game['short_description'],
             'genres' => array_column($game['genres'] ?? [], 'description'),
