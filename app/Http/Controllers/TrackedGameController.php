@@ -9,11 +9,6 @@ use Illuminate\Http\Request;
 
 class TrackedGameController extends Controller
 {
-    /*
-        Получаем детали игры из Steam. Находим или
-        создаем игру. Добавляем связь для текущего
-        пользователя.
-    */
     public function store(string $appId)
     {
         $details = SteamService::getDetails($appId);

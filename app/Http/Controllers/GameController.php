@@ -4,13 +4,8 @@ namespace App\Http\Controllers;
 
 use App\Services\SteamService;
 
-use function PHPUnit\Framework\isEmpty;
-
 class GameController extends Controller
 {
-    /*
-        Главная страница.
-    */
     public function index()
     {
         $query = request('q');
@@ -21,9 +16,7 @@ class GameController extends Controller
         return view('games.index', ['results' => $result]);
     }
 
-    /*
-        Страница игры.
-    */
+
     public function show(string $appId)
     {
         $result = SteamService::getDetails((int) $appId);
