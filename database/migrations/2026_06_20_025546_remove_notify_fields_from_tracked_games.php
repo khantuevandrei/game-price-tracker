@@ -22,7 +22,7 @@ return new class extends Migration
     public function down(): void
     {
         Schema::table('tracked_games', function (Blueprint $table) {
-            $table->boolean('notify_email')->default(true);
+            $table->boolean('notify_email')->default(false);
             $table->boolean('notify_telegram')->default(true);
         });
     }

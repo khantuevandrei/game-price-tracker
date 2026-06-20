@@ -420,7 +420,10 @@ class TelegramPolling extends Command
 
                 $user->update(['email' => $email, 'telegram_id' => $chatId]);
 
-                $reply = 'Почта привязана.';
+                $password = substr(bin2hex(random_bytes(4)), 0, 8);
+                $user->update(['password' => bcrypt($password)]);
+
+                $reply = "Почта привязана.\nНовый пароль для входа на сайт: {$password}";
                 $this->sendReply($chatId, $reply);
 
                 continue;
