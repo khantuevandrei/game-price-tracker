@@ -1,5 +1,5 @@
 <x-layout>
-    <h1>My Tracked Games</h1>
+    <h1>Tracked Games</h1>
 
     <ul>
         @if ($trackedGames->isEmpty())
@@ -15,7 +15,7 @@
             <form method="POST" action="/tracked/{{ $trackedGame->id }}">
                 @csrf
                 @method('DELETE')
-                <button type="submit">Stop tracking</button>
+                <button type="submit">Untrack</button>
             </form>
         </li>
         @endforeach
