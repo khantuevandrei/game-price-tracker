@@ -146,7 +146,7 @@ class TelegramPolling extends Command
                 'description' => $details['description'],
                 'image_url' => $details['image_url'],
                 'genre' => implode(', ', $details['genres']),
-                'current_price' => $details['price'],
+                'current_price' => $details['price'] / 100,
                 'currency' => $details['currency']
             ]
         );
