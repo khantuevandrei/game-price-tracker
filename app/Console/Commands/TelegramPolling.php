@@ -37,6 +37,13 @@ class TelegramPolling extends Command
         return $user->trackedGames()->with('game')->get();
     }
 
+    private function handleCancel(string $chatId): void
+    {
+        Cache::forget('tg_state:' . $chatId);
+        $this->sendReply($chatId, 'Действие отменено.');
+        return;
+    }
+
     private function handleStart(string $chatId, array $message): void
     {
         $user = $this->getUser($chatId);
@@ -64,7 +71,8 @@ class TelegramPolling extends Command
             /price - посмотреть информацию об игре\n
             /set - установить цель по цене\n
             /untrack - прекратить отслеживание\n
-            /help - напомнить команды";
+            /cancel - отмена текущей команды\n
+            /help - показать команды";
 
         $this->sendReply($chatId, $reply);
     }
@@ -77,9 +85,9 @@ class TelegramPolling extends Command
         Cache::put('tg_state:' . $chatId, 'awaiting_email', 300);
 
         if ($currentEmail && !str_starts_with($currentEmail, 'tg_')) {
-            $reply = "Твой текущий email: {$currentEmail}\nВведи новый email для смены.";
+            $reply = "Текущий email: {$currentEmail}\n\nВведи новый email для смены.\n\n/cancel для отмены.";
         } else {
-            $reply = 'Введи свой email.';
+            $reply = "Введи email.\n\n/cancel для отмены.";
         }
 
         $this->sendReply($chatId, $reply);
@@ -88,7 +96,7 @@ class TelegramPolling extends Command
     private function handleSearch(string $chatId): void
     {
         Cache::put('tg_state:' . $chatId, 'awaiting_search', 300);
-        $reply = 'Введи название игры.';
+        $reply = "Введи название игры.\n\n/cancel для отмены.";
         $this->sendReply($chatId, $reply);
     }
 
@@ -144,7 +152,7 @@ class TelegramPolling extends Command
 
         $user->trackedGames()->firstOrCreate(['game_id' => $gameModel->id]);
 
-        $reply = "{$game['title']} добавлено в отслеживание.";
+        $reply = "{$game['title']} отслеживается.";
         $this->sendReply($chatId, $reply);
     }
 
@@ -187,7 +195,7 @@ class TelegramPolling extends Command
         $trackedGames = $this->getTrackedGames($user);
 
         if ($trackedGames->isEmpty()) {
-            $reply = 'Ты не отслеживаешь ни одну игру.';
+            $reply = 'Игры не отслеживаются.';
             $this->sendReply($chatId, $reply);
             return;
         }
@@ -222,6 +230,12 @@ class TelegramPolling extends Command
         $user = $this->getUser($chatId);
         $trackedGames = $this->getTrackedGames($user);
 
+        if ($trackedGames->isEmpty()) {
+            $reply = 'Игры не отслеживаются.';
+            $this->sendReply($chatId, $reply);
+            return;
+        }
+
         if (!isset($trackedGames[$index])) {
             $reply = 'Неверный номер. Используй /list чтобы увидеть номера.';
             $this->sendReply($chatId, $reply);
@@ -250,7 +264,7 @@ class TelegramPolling extends Command
         $trackedGames = $this->getTrackedGames($user);
 
         if ($trackedGames->isEmpty()) {
-            $reply = 'Ты не отслеживаешь ни одну игру.';
+            $reply = 'Игры не отслеживаются.';
             $this->sendReply($chatId, $reply);
             return;
         }
@@ -264,7 +278,7 @@ class TelegramPolling extends Command
         $trackedGame = $trackedGames[$index];
         $trackedGame->delete();
 
-        $reply = "{$trackedGame->game->title} удалена из отслеживания.";
+        $reply = "{$trackedGame->game->title} больше не отслеживается.";
         $this->sendReply($chatId, $reply);
     }
 
@@ -279,7 +293,9 @@ class TelegramPolling extends Command
             /price - посмотреть информацию об игре\n
             /set - установить цель по цене\n
             /untrack - прекратить отслеживание\n
-            /help - напомнить команды";
+            /cancel - отмена текущей команды\n
+            /help - показать команды";
+
         $this->sendReply($chatId, $reply);
     }
 
@@ -313,9 +329,13 @@ class TelegramPolling extends Command
             $chatId = $message['chat']['id'];
             $text = $message['text'] ?? '';
 
-            $state = Cache::get('tg_state:' . $chatId);
+            if (str_starts_with($text, '/cancel')) {
+                $this->handleCancel($chatId);
+                continue;
+            }
 
             // 4.1. Проверка состояния пользователя
+            $state = Cache::get('tg_state:' . $chatId);
 
             // Бот ждёт, что пользователь введёт email
             if ($state === 'awaiting_email') {
@@ -350,7 +370,7 @@ class TelegramPolling extends Command
                 $data = Cache::get("email_verify:{$code}");
 
                 if (!$data || $data['chat_id'] !== $chatId) {
-                    $reply = 'Неверный код. Попробуй еще раз или начни заново с /email';
+                    $reply = "Неверный код. Попробуй еще раз.\n\n/cancel для отмены.";
                     $this->sendReply($chatId, $reply);
                     continue;
                 }
@@ -381,7 +401,7 @@ class TelegramPolling extends Command
                     continue;
                 }
 
-                $results = array_slice($results, 0, 5);
+                $results = array_slice($results, 0, 10);
                 Cache::put('tg_search:' . $chatId, $results, 300);
 
                 $reply = '';
