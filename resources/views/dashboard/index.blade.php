@@ -10,8 +10,6 @@
             <h2>{{ $trackedGame->game->title }}</h2>
             <p>Current price: {{ $trackedGame->game->current_price }} {{ $trackedGame->game->currency }}</p>
             <p>Target price: {{ $trackedGame->target_price?? 'Not set' }} USD</p>
-            <p>Notify by email: {{ $trackedGame->notify_email? 'On' : 'Off' }}</p>
-            <p>Notify by telegram: {{ $trackedGame->notify_telegram? 'On' : 'Off' }}</p>
             <a href="/games/{{ $trackedGame->game->steam_app_id }}">View game</a>
             <a href="/tracked/{{ $trackedGame->id }}/edit">Edit</a>
             <form method="POST" action="/tracked/{{ $trackedGame->id }}">

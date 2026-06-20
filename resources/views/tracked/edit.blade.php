@@ -11,20 +11,6 @@
             step="0.01"
             value="{{ $trackedGame->target_price }}">
 
-        <label for="notify_email">Notify by email:</label>
-        <input type="checkbox"
-            name="notify_email"
-            id="notify_email"
-            value="1"
-            {{ $trackedGame->notify_email? 'checked' : '' }}>
-
-        <label for="notify_telegram">Notify telegram:</label>
-        <input type="checkbox"
-            name="notify_telegram"
-            id="notify_telegram"
-            value="1"
-            {{ $trackedGame->notify_telegram? 'checked' : '' }}>
-
         <button type="submit">Save</button>
     </form>
 </x-layout>

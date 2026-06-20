@@ -51,9 +51,6 @@ class TrackedGameController extends Controller
             'target_price' => 'numeric|nullable',
         ]);
 
-        $validated['notify_email'] = $request->has('notify_email');
-        $validated['notify_telegram'] = $request->has('notify_telegram');
-
         $trackedGame->update($validated);
 
         return redirect('/dashboard')->with('success', 'Tracked game was updated');
