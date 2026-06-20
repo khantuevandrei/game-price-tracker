@@ -71,6 +71,7 @@ class TelegramPolling extends Command
             /price - посмотреть информацию об игре\n
             /set - установить цель по цене\n
             /untrack - прекратить отслеживание\n
+            /notify - вкл/откл уведомления\n
             /cancel - отмена текущей команды\n
             /help - показать команды";
 
@@ -282,6 +283,41 @@ class TelegramPolling extends Command
         $this->sendReply($chatId, $reply);
     }
 
+    private function handleNotify(string $chatId, string $text): void
+    {
+        $user = $this->getUser($chatId);
+
+        if (!$user) {
+            $this->sendReply($chatId, 'Сначала используй /start');
+            return;
+        }
+
+        $parts = explode(' ', $text);
+        $type = $parts[1] ?? null;
+
+        switch ($type) {
+            case 'email':
+                $user->update(['notify_email' => !$user->notify_email]);
+                $status = $user->fresh()->notify_email ? 'включены' : 'отключены';
+                $this->sendReply($chatId, "Email уведомления {$status}.");
+                break;
+            case 'telegram':
+                $user->update(['notify_telegram' => !$user->notify_telegram]);
+                $status = $user->fresh()->notify_telegram ? 'включены' : 'отключены';
+                $this->sendReply($chatId, "Telegram уведомления {$status}.");
+                break;
+            default:
+                if ($type !== null) {
+                    $this->sendReply($chatId, 'Неверный параметр. Используй: /notify email, /notify telegram, /notify');
+                } else {
+                    $email = $user->notify_email ? 'вкл' : 'откл';
+                    $telegram = $user->notify_telegram ? 'вкл' : 'откл';
+                    $this->sendReply($chatId, "Email: {$email}\nTelegram: {$telegram}");
+                    break;
+                }
+        }
+    }
+
     private function handleHelp(string $chatId): void
     {
         $reply = "Доступные команды:\n
@@ -293,6 +329,7 @@ class TelegramPolling extends Command
             /price - посмотреть информацию об игре\n
             /set - установить цель по цене\n
             /untrack - прекратить отслеживание\n
+            /notify - вкл/откл уведомления\n
             /cancel - отмена текущей команды\n
             /help - показать команды";
 
@@ -434,6 +471,8 @@ class TelegramPolling extends Command
                 $this->handleSet($chatId, $text);
             } elseif (str_starts_with($text, '/untrack')) {
                 $this->handleUntrack($chatId, $text);
+            } elseif (str_starts_with($text, '/notify')) {
+                $this->handleNotify($chatId, $text);
             } elseif (str_starts_with($text, '/help')) {
                 $this->handleHelp($chatId);
             }

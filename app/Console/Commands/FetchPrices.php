@@ -43,12 +43,11 @@ class FetchPrices extends Command
 
                 $trackedGames = TrackedGame::where('game_id', $game->id)
                     ->whereNotNull('target_price')
-                    ->where('notify_email', true)
                     ->where('target_price', '>', $newPrice)
                     ->get();
 
                 foreach ($trackedGames as $trackedGame) {
-                    SendPriceAlert::dispatch($trackedGame, $newPrice);
+                    SendPriceAlert::dispatchSync($trackedGame, $newPrice);
                     $this->info("Dispatched alert for {$trackedGame->user->email}");
                 }
 

@@ -8,18 +8,21 @@ use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Foundation\Bus\Dispatchable;
 
 class SendPriceAlert implements ShouldQueue
 {
-    use Queueable;
+    use Dispatchable, Queueable;
 
     public function __construct(public TrackedGame $trackedGame, public int $newPrice) {}
 
     public function handle(): void
     {
-        Mail::to($this->trackedGame->user->email)->send(new PriceDroppedMail($this->trackedGame, $this->newPrice));
+        if ($this->trackedGame->user->notify_email) {
+            Mail::to($this->trackedGame->user->email)->send(new PriceDroppedMail($this->trackedGame, $this->newPrice));
+        }
 
-        if ($this->trackedGame->notify_telegram && $this->trackedGame->user->telegram_id) {
+        if ($this->trackedGame->user->notify_telegram && $this->trackedGame->user->telegram_id) {
             $token = env('TELEGRAM_BOT_TOKEN');
             $chatId = $this->trackedGame->user->telegram_id;
             $text = "Цена на {$this->trackedGame->game->title} упала до \$"
