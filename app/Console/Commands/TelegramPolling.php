@@ -433,8 +433,7 @@ class TelegramPolling extends Command
                 $results = SteamService::search($text);
 
                 if (empty($results)) {
-                    $reply = 'Ничего не найдено.';
-                    $this->sendReply($chatId, $reply);
+                    $this->sendReply($chatId, 'Ничего не найдено.');
                     continue;
                 }
 
@@ -442,15 +441,14 @@ class TelegramPolling extends Command
                 Cache::put('tg_search:' . $chatId, $results, 300);
 
                 $reply = '';
-
                 foreach ($results as $i => $game) {
                     $num = $i + 1;
                     $reply .= "{$num}. {$game['title']}\n";
                 }
-
                 $reply .= "\nВведи /track 1 чтобы добавить в отслеживание.";
 
                 $this->sendReply($chatId, $reply);
+
                 continue;
             }
 

@@ -30,7 +30,8 @@ class SteamService
         foreach ($ids as $index => $id) {
             $result[] = [
                 'id' => (int) $id ?? null,
-                'title' => html_entity_decode($titles[$index])
+                'title' => html_entity_decode($titles[$index]),
+                'image_url' => "https://cdn.cloudflare.steamstatic.com/steam/apps/{$id}/header.jpg"
             ];
         }
 
