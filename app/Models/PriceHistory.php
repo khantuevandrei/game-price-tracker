@@ -10,6 +10,13 @@ class PriceHistory extends Model
 {
     protected $table = 'price_history';
 
+    protected function casts(): array
+    {
+        return [
+            'recorded_at' => 'datetime',
+        ];
+    }
+
     public function game()
     {
         return $this->belongsTo(Game::class);

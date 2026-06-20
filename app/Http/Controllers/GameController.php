@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Services\SteamService;
+use App\Models\Game;
 
 class GameController extends Controller
 {
@@ -27,10 +28,16 @@ class GameController extends Controller
 
         if (empty($result)) abort(404);
 
+        $gameModel = Game::where('steam_app_id', $appId)->first();
+        $priceHistory = $gameModel
+            ? $gameModel->priceHistory()->orderBy('recorded_at')->get()
+            : collect();
+
         return view('games.show', [
             'game' => $result,
             'isTracked' => $isTracked,
-            'trackedGame' => $trackedGame
+            'trackedGame' => $trackedGame,
+            'priceHistory' => $priceHistory
         ]);
     }
 }
