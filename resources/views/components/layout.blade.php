@@ -12,6 +12,7 @@
         <a href="/">Catalog</a>
         @auth
         <a href="/dashboard">Dashboard</a>
+        <a href="/profile">Profile</a>
         @else
         <a href="/login">Login</a>
         <a href="/register">Register</a>

@@ -14,6 +14,14 @@ class ProfileUpdateRequest extends FormRequest
      *
      * @return array<string, ValidationRule|array<mixed>|string>
      */
+    protected function prepareForValidation(): void
+    {
+        $this->merge([
+            'notify_email' => $this->has('notify_email'),
+            'notify_telegram' => $this->has('notify_telegram'),
+        ]);
+    }
+
     public function rules(): array
     {
         return [
@@ -26,6 +34,8 @@ class ProfileUpdateRequest extends FormRequest
                 'max:255',
                 Rule::unique(User::class)->ignore($this->user()->id),
             ],
+            'notify_email' => 'boolean',
+            'notify_telegram' => 'boolean',
         ];
     }
 }

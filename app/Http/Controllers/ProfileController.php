@@ -15,6 +15,8 @@ class ProfileController extends Controller
     {
         return view('profile.edit', [
             'user' => $request->user(),
+            'notify_email' => $request->user()->notify_email,
+            'notify_telegram' => $request->user()->notify_telegram
         ]);
     }
 
