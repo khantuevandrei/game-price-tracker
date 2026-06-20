@@ -11,11 +11,7 @@
         @foreach ($results as $game)
         <div class="card">
             <h3>{{ $game['title'] }}</h3>
-            <form action="/games/{{ $game['id'] }}/track" method="POST">
-                @csrf
-                <button>Track</button>
-            </form>
-            <a href="/games/{{ $game['id'] }}">View</a>
+            <a href="/games/{{ $game['id'] }}"><button>View</button></a>
         </div>
         @endforeach
         @endif
