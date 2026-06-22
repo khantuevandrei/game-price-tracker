@@ -1,6 +1,9 @@
 # Game Price Tracker
 
-Отслеживание цен на игры в Steam с уведомлениями в Telegram (@GamePriceTrackerTelegramBot) и Email.
+Отслеживание цен на игры в Steam с уведомлениями в Telegram и Email.
+
+Web: http://212.108.82.148:8080/
+Telegram: @GamePriceTrackerTelegramBot
 
 ## Функциональность
 
