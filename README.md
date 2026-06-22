@@ -55,7 +55,7 @@ git clone https://github.com/khantuevandrei/game-price-tracker.git
 cd game-price-tracker
 cp .env.example .env
 
-# Заполни .env (TELEGRAM_BOT_TOKEN обязательно)
+## Заполни .env (TELEGRAM_BOT_TOKEN обязательно)
 
 docker compose up -d --build
 docker compose exec app php artisan migrate
