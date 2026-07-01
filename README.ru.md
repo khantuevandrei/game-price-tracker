@@ -1,139 +1,141 @@
 # Game Price Tracker
 
-Отслеживание цен на игры в Steam с уведомлениями в Telegram и Email.
+[![CI](https://github.com/khantuevandrei/game-price-tracker/actions/workflows/ci.yml/badge.svg)](https://github.com/khantuevandrei/game-price-tracker/actions/workflows/ci.yml)
+[![Deploy](https://github.com/khantuevandrei/game-price-tracker/actions/workflows/deploy.yml/badge.svg)](https://github.com/khantuevandrei/game-price-tracker/actions/workflows/deploy.yml)
+![PHP](https://img.shields.io/badge/PHP-8.5-777BB4?logo=php&logoColor=white)
+![Laravel](https://img.shields.io/badge/Laravel-11-FF2D20?logo=laravel&logoColor=white)
+![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-4169E1?logo=postgresql&logoColor=white)
+![Docker](https://img.shields.io/badge/Docker-Compose-2496ED?logo=docker&logoColor=white)
 
-Live-demo: https://steam.khantuev.dev/
-Telegram: @GamePriceTrackerTelegramBot
+Отслеживание цен на игры в Steam с уведомлениями на email и в Telegram, когда цена падает до целевой.
 
-![Laravel](https://img.shields.io/badge/Laravel-13-red?logo=laravel)
-![PHP](https://img.shields.io/badge/PHP-8.5-blue?logo=php)
-![Tests](https://img.shields.io/badge/tests-16%20passed-green)
-![Docker](https://img.shields.io/badge/Docker-ready-blue?logo=docker)
-![License](https://img.shields.io/badge/license-MIT-green)
+🇬🇧 [English version](README.md)
 
-## Функциональность
+## 🎮 Live Demo
 
-- **Поиск игр** через Steam (HTML-парсинг + API).
-- **График цен** на странице игры (Chart.js).
-- **Уведомления** при падении цены ниже целевой (Email + Telegram).
-- **Telegram-бот** с набором команд:
-    - `/start` — начало работы.
-    - `/search` — поиск игр.
-    - `/track` — добавить в отслеживание.
-    - `/list` — список отслеживаемых игр.
-    - `/price` — текущая цена.
-    - `/set` — установить целевую цену.
-    - `/untrack` — удалить из отслеживания.
-    - `/notify` — настройка уведомлений.
-    - `/cancel` — отмена последней команды.
-    - `/email` — привязка email с верификацией.
-    - `/help` — список доступных команд.
-- **Email-уведомления** через очереди (Redis).
-- **История цен** и график изменения.
-- **Веб-интерфейс** на Blade с аутентификацией (Breeze).
-- **Docker** — запуск одной командой.
+- **Веб-приложение:** [steam.khantuev.dev](https://steam.khantuev.dev)
+- **Telegram-бот:** [@GamePriceTrackerTelegramBot](https://t.me/GamePriceTrackerTelegramBot)
 
-## Стек
+Демо-аккаунт для быстрой проверки:
 
-- **Backend:** Laravel 13, PHP 8.5
-- **Database:** PostgreSQL 16
-- **Queue/Cache:** Redis
-- **Frontend:** Blade, Chart.js
-- **Bot:** Telegram Bot API
-- **API:** Steam (appdetails + HTML-парсинг)
-- **Deploy:** Docker, Docker Compose, Nginx, Supervisor
-
----
-
-## 🇬🇧 English
-
-**Game Price Tracker** — a Steam game price monitoring service with Telegram and Email notifications.
-
-### Features
-
-- **Game search** via Steam (HTML parsing + API)
-- **Price history chart** (Chart.js)
-- **Notifications** when price drops below target (Email + Telegram)
-- **Telegram bot** with commands: `/start`, `/search`, `/track`, `/list`, `/price`, `/set`, `/untrack`, `/notify`, `/cancel`, `/email`, `/help`
-- **Email verification** via code
-- **Queue-driven** notifications (Redis)
-- **Docker** for easy deployment
-
-### Stack
-
-- **Backend:** Laravel 13, PHP 8.5
-- **Database:** PostgreSQL 16
-- **Queue/Cache:** Redis
-- **Frontend:** Blade, Chart.js
-- **Bot:** Telegram Bot API
-- **API:** Steam (appdetails + HTML parsing)
-- **Deploy:** Docker, Docker Compose, Nginx, Supervisor
-
-### Quick Start
-
-\`\`\`bash
-git clone https://github.com/khantuevandrei/game-price-tracker.git
-cd game-price-tracker
-cp .env.example .env
-
-# Fill .env (TELEGRAM_BOT_TOKEN required)
-
-docker compose up -d --build
-docker compose exec app php artisan migrate
-docker compose exec app php artisan key:generate
-\`\`\`
-
-Open: `http://localhost:8080`
-
-### Demo
-
-- **Web:** [http://212.108.82.148:8080/](http://212.108.82.148:8080/)
-- **Telegram:** [@GamePriceTrackerTelegramBot](https://t.me/GamePriceTrackerTelegramBot)
-
----
+- Email: `demo@khantuev.dev`
+- Пароль: `demo1234`
 
 ## Скриншоты
 
-Каталог
-![Каталог](public/screenshots/catalog.png)
+<p align="center">
+  <img src="docs/screenshots/dashboard.png" width="800" alt="Дашборд с трекнутыми играми">
+  <br><em>Дашборд — отслеживаемые игры с текущей и целевой ценой</em>
+</p>
 
-Страница игры
-![Каталог](public/screenshots/game.png)
+<p align="center">
+  <img src="docs/screenshots/search.png" width="800" alt="Поиск игр в Steam">
+  <br><em>Поиск — любая игра из каталога Steam</em>
+</p>
 
-Telegram-бот
-![Бот](public/screenshots/bot.png)
+<p align="center">
+  <img src="docs/screenshots/telegram.png" width="400" alt="Уведомление в Telegram-боте">
+  <br><em>Уведомление в Telegram, когда цена отслеживаемой игры упала</em>
+</p>
 
-Dashboard
-![Dashboard](public/sreenshots/dashboard.png)
+## Возможности
 
-## Быстрый старт (локально)
+- 🔍 Поиск игр в каталоге Steam
+- 📊 История изменения цены по каждой отслеживаемой игре
+- 🎯 Установка целевой цены — уведомление, когда цена упадёт ниже
+- 📧 Транзакционные email-уведомления через Resend (свой домен, подпись DKIM/SPF)
+- 🤖 Telegram-бот: `/search`, `/list`, `/track`, `/untrack`
+- 📈 Автоматическое обновление цен раз в час через Laravel Scheduler
+- 🔐 Аутентификация Laravel Breeze + подтверждение email
 
-\`\`\`bash
-git clone https://github.com/khantuevandrei/game-price-tracker.git
-cd game-price-tracker
-cp .env.example .env
+## Технологический стек
 
-## Заполни .env (TELEGRAM_BOT_TOKEN обязательно)
-
-docker compose up -d --build
-docker compose exec app php artisan migrate
-docker compose exec app php artisan key:generate
-\`\`\`
-
-Открыть: `http://localhost:8080`
-
-## Команды Artisan
-
-| Команда                | Описание                          |
-| ---------------------- | --------------------------------- |
-| `prices:fetch`         | Обновление цен из Steam API       |
-| `app:telegram-polling` | Обработка сообщений Telegram-бота |
+**Backend:** Laravel 11, PHP 8.5, PostgreSQL 16, Redis
+**Frontend:** Blade, Tailwind CSS, Alpine.js
+**Инфраструктура:** Docker Compose, Caddy (reverse proxy + автоматический HTTPS), Ubuntu VPS
+**Тесты и CI/CD:** PHPUnit, Laravel Pint, GitHub Actions
+**Внешние API:** Steam Web API, Telegram Bot API, Resend
 
 ## Архитектура
 
-\`\`\`
-Web (Blade) -> Controller -> Service -> Steam API
-Telegram Bot -> TelegramPolling -> Service -> Steam API
-Cron -> FetchPrices -> Steam API -> PriceHistory
-Queue -> SendPriceAlert -> Email / Telegram
-\`\`\`
+```
+        ┌──────────────┐
+        │ Пользователь │
+        └──────┬───────┘
+               │ HTTPS
+        ┌──────▼───────┐
+        │    Caddy     │  ← Let's Encrypt авто-обновление
+        └──────┬───────┘
+               │
+        ┌──────▼───────┐         ┌────────────────┐
+        │   Laravel    │ ─────▶️ │  Steam API     │
+        │  (Docker)    │ ─────▶️ │  Telegram API  │
+        │              │ ─────▶️ │  Resend        │
+        └──────┬───────┘         └────────────────┘
+               │
+     ┌─────────┼─────────┐
+     ▼         ▼         ▼
+ ┌────────┐ ┌───────┐ ┌──────────┐
+ │Postgres│ │ Redis │ │Scheduler │
+ └────────┘ └───────┘ └──────────┘
+```
+
+## Локальный запуск
+
+```bash
+git clone https://github.com/khantuevandrei/game-price-tracker.git
+cd game-price-tracker
+cp .env.example .env
+docker compose up -d --build
+docker compose exec app php artisan key:generate
+docker compose exec app php artisan migrate
+```
+
+Приложение доступно по `http://localhost:8080`.
+
+### Обязательные переменные окружения
+
+```env
+APP_URL=http://localhost:8080
+
+DB_CONNECTION=pgsql
+DB_HOST=postgres
+DB_DATABASE=game_price_tracker
+DB_USERNAME=laravel
+DB_PASSWORD=your_password
+
+REDIS_HOST=redis
+
+TELEGRAM_BOT_TOKEN=токен_вашего_бота
+
+MAIL_MAILER=resend
+RESEND_KEY=ваш_resend_api_key
+MAIL_FROM_ADDRESS=noreply@yourdomain.com
+MAIL_FROM_NAME="Game Price Tracker"
+```
+
+## Тесты
+
+```bash
+docker compose exec app php artisan test
+```
+
+37 тестов: auth-флоу, интеграция со Steam API, трекинг игр, Telegram-бот.
+
+## Стиль кода
+
+```bash
+docker compose exec app vendor/bin/pint
+```
+
+Laravel Pint (PSR-12). Автоматически проверяется в CI при каждом push.
+
+## Деплой
+
+Push в `main` → GitHub Actions гоняет тесты + линт → при успехе автоматический деплой на VPS через SSH → `git pull` + пересборка контейнеров + кеш config/routes/views.
+
+Продакшен: [steam.khantuev.dev](https://steam.khantuev.dev), self-managed Ubuntu VPS, Caddy с автоматическим HTTPS через Let's Encrypt.
+
+## Лицензия
+
+MIT
