@@ -2,7 +2,7 @@
 
 Track Steam game prices with notifications via Telegram and Email.
 
-Web: https://steam.khanvps.xyz/
+Live-demo: https://steam.khantuev.dev/
 Telegram: @GamePriceTrackerTelegramBot
 
 ![Laravel](https://img.shields.io/badge/Laravel-13-red?logo=laravel)

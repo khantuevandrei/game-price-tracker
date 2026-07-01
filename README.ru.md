@@ -2,7 +2,7 @@
 
 Отслеживание цен на игры в Steam с уведомлениями в Telegram и Email.
 
-Web: https://steam.khanvps.xyz/
+Live-demo: https://steam.khantuev.dev/
 Telegram: @GamePriceTrackerTelegramBot
 
 ![Laravel](https://img.shields.io/badge/Laravel-13-red?logo=laravel)
