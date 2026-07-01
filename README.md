@@ -2,8 +2,14 @@
 
 Track Steam game prices with notifications via Telegram and Email.
 
-Web: http://212.108.82.148:8080/
+Web: https://steam.khanvps.xyz/
 Telegram: @GamePriceTrackerTelegramBot
+
+![Laravel](https://img.shields.io/badge/Laravel-13-red?logo=laravel)
+![PHP](https://img.shields.io/badge/PHP-8.5-blue?logo=php)
+![Tests](https://img.shields.io/badge/tests-16%20passed-green)
+![Docker](https://img.shields.io/badge/Docker-ready-blue?logo=docker)
+![License](https://img.shields.io/badge/license-MIT-green)
 
 ## Features
 
