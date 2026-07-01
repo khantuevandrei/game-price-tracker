@@ -8,31 +8,54 @@ use App\Models\Game;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\DB;
 
 class TelegramBotTest extends TestCase
 {
     use RefreshDatabase;
 
+    protected function setUp(): void
+    {
+        parent::setUp();
+        config(['services.telegram.bot_token' => 'test-token']);
+        putenv('TELEGRAM_BOT_TOKEN=test-token');
+    }
+
     public function test_start_creates_user_and_responds(): void
     {
         Http::fake([
-            'api.telegram.org/*' => Http::response(['ok' => true]),
+            'api.telegram.org/*' => Http::response([
+                'ok' => true,
+                'result' => [
+                    [
+                        'update_id' => 1,
+                        'message' => [
+                            'chat' => ['id' => '12345'],
+                            'text' => '/start',
+                        ],
+                    ],
+                ],
+            ]),
         ]);
 
         $this->artisan('app:telegram-polling')
             ->assertSuccessful();
+
+        $this->assertDatabaseHas('users', ['telegram_id' => '12345']);
     }
 
     public function test_email_command_sets_state(): void
     {
+        Mail::fake();
+
         $user = User::factory()->create(['telegram_id' => '12345']);
 
         Cache::put('tg_offset', 0);
         Cache::put('tg_state:12345', 'awaiting_email');
 
         Http::fake([
-            'api.telegram.org/getUpdates*' => Http::response([
+            'api.telegram.org/*' => Http::response([
                 'ok' => true,
                 'result' => [
                     [
@@ -40,11 +63,10 @@ class TelegramBotTest extends TestCase
                         'message' => [
                             'chat' => ['id' => '12345'],
                             'text' => 'test@example.com',
-                        ]
-                    ]
-                ]
+                        ],
+                    ],
+                ],
             ]),
-            'api.telegram.org/sendMessage*' => Http::response(['ok' => true]),
         ]);
 
         $this->artisan('app:telegram-polling')
@@ -56,7 +78,7 @@ class TelegramBotTest extends TestCase
         $user = User::factory()->create(['telegram_id' => '12345']);
 
         Http::fake([
-            'api.telegram.org/getUpdates*' => Http::response([
+            'api.telegram.org/*' => Http::response([
                 'ok' => true,
                 'result' => [
                     [
@@ -64,19 +86,18 @@ class TelegramBotTest extends TestCase
                         'message' => [
                             'chat' => ['id' => '12345'],
                             'text' => '/search',
-                        ]
-                    ]
-                ]
+                        ],
+                    ],
+                ],
             ]),
-            'api.telegram.org/sendMessage*' => Http::response(['ok' => true]),
             'store.steampowered.com/search/*' => Http::response(
                 '<a data-ds-appid="1245620"><span class="title">ELDEN RING</span></a>',
                 200
             ),
         ]);
 
-        $this->artisan('app:telegram-polling');
-        $this->assertTrue(true);
+        $this->artisan('app:telegram-polling')
+            ->assertSuccessful();
     }
 
     public function test_list_shows_tracked_games(): void
@@ -102,7 +123,7 @@ class TelegramBotTest extends TestCase
         ]);
 
         Http::fake([
-            'api.telegram.org/getUpdates*' => Http::response([
+            'api.telegram.org/*' => Http::response([
                 'ok' => true,
                 'result' => [
                     [
@@ -110,11 +131,10 @@ class TelegramBotTest extends TestCase
                         'message' => [
                             'chat' => ['id' => '12345'],
                             'text' => '/list',
-                        ]
-                    ]
-                ]
+                        ],
+                    ],
+                ],
             ]),
-            'api.telegram.org/sendMessage*' => Http::response(['ok' => true]),
         ]);
 
         $this->artisan('app:telegram-polling')
