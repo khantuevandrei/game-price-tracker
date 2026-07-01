@@ -15,6 +15,6 @@ class PriceDroppedMail extends Mailable
 
     public function build(): self
     {
-        return $this->subject('Price dropped: ' . $this->trackedGame->game->title)->view('emails.price-dropped');
+        return $this->subject('Price dropped: '.$this->trackedGame->game->title)->view('emails.price-dropped');
     }
 }

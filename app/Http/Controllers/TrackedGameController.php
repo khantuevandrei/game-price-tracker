@@ -13,7 +13,9 @@ class TrackedGameController extends Controller
     {
         $details = SteamService::getDetails($appId);
 
-        if (empty($details)) abort(404);
+        if (empty($details)) {
+            abort(404);
+        }
 
         if (empty($details['price'])) {
             return back()->with('error', 'This game is free. No need for tracking');
@@ -27,7 +29,7 @@ class TrackedGameController extends Controller
                 'image_url' => $details['image_url'],
                 'genre' => implode(', ', $details['genres']),
                 'current_price' => $details['price'] / 100,
-                'currency' => $details['currency']
+                'currency' => $details['currency'],
             ]
         );
 
@@ -38,14 +40,18 @@ class TrackedGameController extends Controller
 
     public function edit(TrackedGame $trackedGame)
     {
-        if ($trackedGame->user->id !== auth()->id()) abort(403);
+        if ($trackedGame->user->id !== auth()->id()) {
+            abort(403);
+        }
 
         return view('tracked.edit', ['trackedGame' => $trackedGame]);
     }
 
     public function update(Request $request, TrackedGame $trackedGame)
     {
-        if ($trackedGame->user->id !== auth()->id()) abort(403);
+        if ($trackedGame->user->id !== auth()->id()) {
+            abort(403);
+        }
 
         $validated = $request->validate([
             'target_price' => 'numeric|nullable',
@@ -58,7 +64,9 @@ class TrackedGameController extends Controller
 
     public function destroy(TrackedGame $trackedGame)
     {
-        if ($trackedGame->user_id !== auth()->id()) abort(403);
+        if ($trackedGame->user_id !== auth()->id()) {
+            abort(403);
+        }
 
         $trackedGame->delete();
 

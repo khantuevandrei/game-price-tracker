@@ -1,8 +1,8 @@
 <?php
 
 use App\Http\Controllers\DashboardController;
-use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\GameController;
+use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\TrackedGameController;
 use Illuminate\Support\Facades\Route;
 
@@ -23,4 +23,4 @@ Route::middleware('auth')->group(function () {
     Route::delete('/tracked/{trackedGame}', [TrackedGameController::class, 'destroy']);
 });
 
-require __DIR__ . '/auth.php';
+require __DIR__.'/auth.php';

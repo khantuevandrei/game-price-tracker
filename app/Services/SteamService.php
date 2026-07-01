@@ -14,7 +14,9 @@ class SteamService
 
         $response = Http::withHeaders(['User-Agent' => 'Mozilla/5.0'])->get($url);
 
-        if (!$response->ok()) return [];
+        if (! $response->ok()) {
+            return [];
+        }
 
         $html = $response->body();
 
@@ -31,7 +33,7 @@ class SteamService
             $result[] = [
                 'id' => (int) $id ?? null,
                 'title' => html_entity_decode($titles[$index]),
-                'image_url' => "https://cdn.cloudflare.steamstatic.com/steam/apps/{$id}/header.jpg"
+                'image_url' => "https://cdn.cloudflare.steamstatic.com/steam/apps/{$id}/header.jpg",
             ];
         }
 
@@ -44,11 +46,15 @@ class SteamService
 
         $response = Http::get($url);
 
-        if (!$response->ok()) return [];
+        if (! $response->ok()) {
+            return [];
+        }
 
         $data = $response->json();
 
-        if ($data[$appId]['success'] !== true) return [];
+        if ($data[$appId]['success'] !== true) {
+            return [];
+        }
 
         $game = $data[$appId]['data'];
 
@@ -59,7 +65,7 @@ class SteamService
             'genres' => array_column($game['genres'] ?? [], 'description'),
             'price' => $game['price_overview']['final'] ?? null,
             'currency' => $game['price_overview']['currency'] ?? null,
-            'image_url' => $game['header_image']
+            'image_url' => $game['header_image'],
         ];
 
         return $result;

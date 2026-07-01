@@ -24,7 +24,9 @@ class FetchPrices extends Command
         foreach ($games as $game) {
             $details = SteamService::getDetails($game->steam_app_id);
 
-            if (!$details || !isset($details['price'])) continue;
+            if (! $details || ! isset($details['price'])) {
+                continue;
+            }
 
             $newPrice = $details['price'] / 100;
             $oldPrice = $game->current_price;
@@ -34,11 +36,11 @@ class FetchPrices extends Command
                     'game_id' => $game->id,
                     'price' => $newPrice,
                     'currency' => $details['currency'] ?? 'USD',
-                    'recorded_at' => now()
+                    'recorded_at' => now(),
                 ]);
 
                 $game->update([
-                    'current_price' => $newPrice
+                    'current_price' => $newPrice,
                 ]);
 
                 $trackedGames = TrackedGame::where('game_id', $game->id)

@@ -2,14 +2,14 @@
 
 namespace Tests\Feature;
 
-use Tests\TestCase;
-use App\Models\User;
 use App\Models\Game;
+use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Cache;
-use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Mail;
+use Tests\TestCase;
 
 class TelegramBotTest extends TestCase
 {

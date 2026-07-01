@@ -2,8 +2,8 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
+use Illuminate\Database\Eloquent\Model;
 
 #[Fillable(['game_id', 'price', 'currency', 'recorded_at'])]
 class PriceHistory extends Model

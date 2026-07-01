@@ -2,9 +2,9 @@
 
 namespace Tests\Unit;
 
-use Tests\TestCase;
 use App\Services\SteamService;
 use Illuminate\Support\Facades\Http;
+use Tests\TestCase;
 
 class SteamServiceTest extends TestCase
 {
@@ -12,7 +12,7 @@ class SteamServiceTest extends TestCase
     {
         Http::fake([
             'store.steampowered.com/search/*' => Http::response(
-                '<a data-ds-appid="1245620"><span class="title">ELDEN RING</span></a>' .
+                '<a data-ds-appid="1245620"><span class="title">ELDEN RING</span></a>'.
                     '<a data-ds-appid="123"><span class="title">Test Game</span></a>',
                 200
             ),
@@ -49,8 +49,8 @@ class SteamServiceTest extends TestCase
                         'genres' => [['description' => 'Action'], ['description' => 'RPG']],
                         'price_overview' => ['final' => 3999, 'currency' => 'USD'],
                         'header_image' => 'https://example.com/image.jpg',
-                    ]
-                ]
+                    ],
+                ],
             ], 200),
         ]);
 
@@ -65,7 +65,7 @@ class SteamServiceTest extends TestCase
     public function test_get_details_returns_empty_on_failure(): void
     {
         Http::fake([
-            'store.steampowered.com/api/appdetails*' => Http::response('', 500)
+            'store.steampowered.com/api/appdetails*' => Http::response('', 500),
         ]);
 
         $details = SteamService::getDetails(1245620);

@@ -2,8 +2,8 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
+use Illuminate\Database\Eloquent\Model;
 
 #[Fillable(['user_id', 'game_id', 'target_price'])]
 class TrackedGame extends Model

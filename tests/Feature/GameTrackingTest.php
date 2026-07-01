@@ -2,11 +2,11 @@
 
 namespace Tests\Feature;
 
-use Tests\TestCase;
-use App\Models\User;
 use App\Models\Game;
+use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
+use Tests\TestCase;
 
 class GameTrackingTest extends TestCase
 {
@@ -41,8 +41,8 @@ class GameTrackingTest extends TestCase
                         'genres' => [['description' => 'Action']],
                         'price_overview' => ['final' => 3999, 'currency' => 'USD'],
                         'header_image' => 'https://example.com/image.jpg',
-                    ]
-                ]
+                    ],
+                ],
             ], 200),
         ]);
 
@@ -52,10 +52,10 @@ class GameTrackingTest extends TestCase
         $response->assertRedirect();
         $this->assertDatabaseHas('games', [
             'steam_app_id' => '1245620',
-            'title' => 'Elden Ring'
+            'title' => 'Elden Ring',
         ]);
         $this->assertDatabaseHas('tracked_games', [
-            'user_id' => $user->id
+            'user_id' => $user->id,
         ]);
     }
 
@@ -74,7 +74,7 @@ class GameTrackingTest extends TestCase
 
         $user->trackedGames()->create([
             'game_id' => $game->id,
-            'target_price' => 29.99
+            'target_price' => 29.99,
         ]);
 
         $response = $this->actingAs($user)->get('/dashboard');
