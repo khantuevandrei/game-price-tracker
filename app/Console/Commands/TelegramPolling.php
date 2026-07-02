@@ -27,16 +27,18 @@ class TelegramPolling extends Command
         ]);
     }
 
-    private function applyLocale(array $message): void
-    {
-        $lang = $message['from']['language_code'] ?? 'en';
-        $lang = substr($lang, 0, 2);
-        app()->setLocale(in_array($lang, ['en', 'ru'], true) ? $lang : 'en');
-    }
-
     private function getUser(string $chatId): ?User
     {
         return User::where('telegram_id', $chatId)->first();
+    }
+
+    private function requireUser(int $chatId): ?User
+    {
+        $user = $this->getUser($chatId);
+        if (! $user) {
+            $this->sendReply($chatId, __('telegram.not_linked'));
+        }
+        return $user;
     }
 
     private function getTrackedGames(User $user)
@@ -73,6 +75,9 @@ class TelegramPolling extends Command
     private function handleEmail(string $chatId): void
     {
         $user = $this->getUser($chatId);
+
+        if (! $user = $this->requireUser($chatId)) return;
+
         $currentEmail = $user->email ?? null;
 
         Cache::put('tg_state:' . $chatId, 'awaiting_email', 300);
@@ -130,6 +135,8 @@ class TelegramPolling extends Command
 
         $user = $this->getUser($chatId);
 
+        if (! $user = $this->requireUser($chatId)) return;
+
         $gameModel = Game::firstOrCreate(
             ['steam_app_id' => $appId],
             [
@@ -150,6 +157,9 @@ class TelegramPolling extends Command
     private function handleList(string $chatId): void
     {
         $user = $this->getUser($chatId);
+
+        if (! $user = $this->requireUser($chatId)) return;
+
         $trackedGames = $this->getTrackedGames($user);
 
         if ($trackedGames->isEmpty()) {
@@ -183,6 +193,9 @@ class TelegramPolling extends Command
         }
 
         $user = $this->getUser($chatId);
+
+        if (! $user = $this->requireUser($chatId)) return;
+
         $trackedGames = $this->getTrackedGames($user);
 
         if ($trackedGames->isEmpty()) {
@@ -219,6 +232,9 @@ class TelegramPolling extends Command
         }
 
         $user = $this->getUser($chatId);
+
+        if (! $user = $this->requireUser($chatId)) return;
+
         $trackedGames = $this->getTrackedGames($user);
 
         if ($trackedGames->isEmpty()) {
@@ -254,6 +270,9 @@ class TelegramPolling extends Command
         }
 
         $user = $this->getUser($chatId);
+
+        if (! $user = $this->requireUser($chatId)) return;
+
         $trackedGames = $this->getTrackedGames($user);
 
         if ($trackedGames->isEmpty()) {
@@ -279,11 +298,7 @@ class TelegramPolling extends Command
     {
         $user = $this->getUser($chatId);
 
-        if (! $user) {
-            $this->sendReply($chatId, __('telegram.notify_need_start'));
-
-            return;
-        }
+        if (! $user = $this->requireUser($chatId)) return;
 
         $parts = explode(' ', $text);
         $type = $parts[1] ?? null;
@@ -366,7 +381,6 @@ class TelegramPolling extends Command
 
         if (! $user) {
             $this->sendReply($chatId, __('telegram.unlink_not_linked'));
-
             return;
         }
 
@@ -455,7 +469,9 @@ class TelegramPolling extends Command
                 Cache::forget("email_verify:{$code}");
 
                 $email = $data['email'];
+
                 $user = $this->getUser($chatId);
+                if (! $user = $this->requireUser($chatId)) return;
 
                 $user->update(['email' => $email, 'telegram_id' => $chatId]);
 
