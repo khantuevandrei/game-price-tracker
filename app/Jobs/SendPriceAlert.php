@@ -23,12 +23,12 @@ class SendPriceAlert implements ShouldQueue
         }
 
         if ($this->trackedGame->user->notify_telegram && $this->trackedGame->user->telegram_id) {
-            $token = env('TELEGRAM_BOT_TOKEN');
+            $token = config('services.telegram.token');
             $chatId = $this->trackedGame->user->telegram_id;
             $text = "Цена на {$this->trackedGame->game->title} упала до \$"
-                .number_format($this->newPrice, 2)
-                .".\nТвоя цель: \$"
-                .number_format($this->trackedGame->target_price, 2);
+                . number_format($this->newPrice, 2)
+                . ".\nТвоя цель: \$"
+                . number_format($this->trackedGame->target_price, 2);
 
             Http::post("https://api.telegram.org/bot{$token}/sendMessage", [
                 'chat_id' => $chatId,

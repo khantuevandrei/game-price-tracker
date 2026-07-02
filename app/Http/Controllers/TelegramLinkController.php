@@ -11,11 +11,11 @@ class TelegramLinkController extends Controller
     {
         $code = strtoupper(substr(bin2hex(random_bytes(4)), 0, 6));
 
-        Cache::put('tg_link:'.$code, $request->user()->id, 600);
+        Cache::put('tg_link:' . $code, $request->user()->id, 600);
 
         return response()->json([
             'code' => $code,
-            'bot_username' => env('TELEGRAM_BOT_USERNAME'),
+            'bot_username' => config('services.telegram.username'),
             'expires_in' => 600,
         ]);
     }

@@ -19,7 +19,7 @@ class TelegramPolling extends Command
 {
     private function sendReply(string $chatId, string $reply): void
     {
-        $token = env('TELEGRAM_BOT_TOKEN');
+        $token = config('services.telegram.token');
 
         Http::post("https://api.telegram.org/bot{$token}/sendMessage", [
             'chat_id' => $chatId,
@@ -378,7 +378,7 @@ class TelegramPolling extends Command
 
     public function handle()
     {
-        $token = env('TELEGRAM_BOT_TOKEN');
+        $token = config('services.telegram.token');
         $offset = Cache::get('tg_offset', 0);
         $url = "https://api.telegram.org/bot{$token}/getUpdates?offset=" . ($offset + 1);
         $response = Http::get($url);
