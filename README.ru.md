@@ -34,7 +34,7 @@
 </p>
 
 <p align="center">
-  <img src="docs/screenshots/telegram.png" width="400" alt="Уведомление в Telegram-боте">
+  <img src="docs/screenshots/bot-ru.png" width="400" alt="Уведомление в Telegram-боте">
   <br><em>Уведомление в Telegram, когда цена отслеживаемой игры упала</em>
 </p>
 

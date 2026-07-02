@@ -34,7 +34,7 @@ Demo account for a quick look:
 </p>
 
 <p align="center">
-  <img src="docs/screenshots/bot.png" width="400" alt="Telegram bot notification">
+  <img src="docs/screenshots/bot-en.png" width="400" alt="Telegram bot notification">
   <br><em>Telegram notification when a tracked game price drops</em>
 </p>
 
