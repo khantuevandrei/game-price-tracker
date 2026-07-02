@@ -43,9 +43,9 @@ Demo account for a quick look:
 - 🔍 Search games from the Steam catalog
 - 📊 Track price history for every tracked game
 - 🎯 Set a target price — get notified when the price drops below it
-- 📧 Email notifications via SMTP
+- 📧 Email notifications via Resend (domain, signature DKIM/SPF)
 - 🤖 Telegram bot commands:
-  `/start`, `/search`, `/track`, `/list`, `/price`, `/set`, `/untrack`, `/notify`, `/cancel`, `/email`, `/help`
+  `/start`, `/search`, `/track`, `/list`, `/price`, `/set`, `/untrack`, `/notify`, `/cancel`, `/email`, `/link`, `/unlink`, `/help`
 - 📈 Automatic hourly price refresh via Laravel Scheduler
 - 🔐 Auth flow with Laravel Breeze + email verification
 
@@ -108,6 +108,7 @@ DB_PASSWORD=your_password
 REDIS_HOST=redis
 
 TELEGRAM_BOT_TOKEN=your_bot_token
+TELEGRAM_BOT_USERNAME=your_bot_name
 
 MAIL_MAILER=resend
 RESEND_KEY=your_resend_api_key

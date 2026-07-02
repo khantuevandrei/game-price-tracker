@@ -44,7 +44,7 @@
 - 📊 История изменения цены по каждой отслеживаемой игре
 - 🎯 Установка целевой цены — уведомление, когда цена упадёт ниже
 - 📧 Транзакционные email-уведомления через Resend (свой домен, подпись DKIM/SPF)
-- 🤖 Telegram-бот: `/search`, `/list`, `/track`, `/untrack`
+- 🤖 Telegram-бот: `/start`, `/search`, `/track`, `/list`, `/price`, `/set`, `/untrack`, `/notify`, `/cancel`, `/email`, `/link`, `/unlink`, `/help`
 - 📈 Автоматическое обновление цен раз в час через Laravel Scheduler
 - 🔐 Аутентификация Laravel Breeze + подтверждение email
 
@@ -107,6 +107,7 @@ DB_PASSWORD=your_password
 REDIS_HOST=redis
 
 TELEGRAM_BOT_TOKEN=токен_вашего_бота
+TELEGRAM_BOT_USERNAME=имя_вашего_бота
 
 MAIL_MAILER=resend
 RESEND_KEY=ваш_resend_api_key
