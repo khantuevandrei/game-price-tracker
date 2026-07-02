@@ -21,36 +21,6 @@ services:
     depends_on:
       - app
 
-  scheduler:
-    build: .
-    restart: unless-stopped
-    working_dir: /var/www
-    volumes:
-      - .:/var/www
-    depends_on:
-      - db
-      - redis
-    environment:
-      - DB_HOST=db
-      - REDIS_HOST=redis
-      - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN}
-    command: sh -c "while true; do php artisan schedule:run --verbose --no-interaction; sleep 60; done"
-
-  worker:
-    build: .
-    restart: unless-stopped
-    working_dir: /var/www
-    volumes:
-      - .:/var/www
-    depends_on:
-      - db
-      - redis
-    environment:
-      - DB_HOST=db
-      - REDIS_HOST=redis
-      - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN}
-    command: php artisan queue:work --sleep=3 --tries=3 --max-time=3600
-
   db:
     image: postgres:16
     environment:
