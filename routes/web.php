@@ -3,6 +3,7 @@
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\GameController;
 use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\TelegramLinkController;
 use App\Http\Controllers\TrackedGameController;
 use Illuminate\Support\Facades\Route;
 
@@ -21,6 +22,9 @@ Route::middleware('auth')->group(function () {
     Route::get('/tracked/{trackedGame}/edit', [TrackedGameController::class, 'edit']);
     Route::patch('/tracked/{trackedGame}', [TrackedGameController::class, 'update']);
     Route::delete('/tracked/{trackedGame}', [TrackedGameController::class, 'destroy']);
+
+    Route::post('/telegram/link/generate', [TelegramLinkController::class, 'generate'])->name('telegram.link.generate');
+    Route::post('/telegram/unlink', [TelegramLinkController::class, 'unlink'])->name('telegram.unlink');
 });
 
-require __DIR__.'/auth.php';
+require __DIR__ . '/auth.php';

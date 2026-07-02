@@ -4,31 +4,35 @@ return [
     'cancelled' => 'Action cancelled.',
 
     'start' => "Hi! This is a Steam game price tracking bot.\n\n"
-        ."Available commands:\n"
-        ."/start — greeting\n"
-        ."/email — link email\n"
-        ."/search — find a game\n"
-        ."/track — track a game\n"
-        ."/list — view tracked games\n"
-        ."/price — view game info\n"
-        ."/set — set target price\n"
-        ."/untrack — stop tracking\n"
-        ."/notify — toggle notifications\n"
-        ."/cancel — cancel current command\n"
-        .'/help — show commands',
+        . "Available commands:\n"
+        . "/start — greeting\n"
+        . "/email — link email\n"
+        . "/search — find a game\n"
+        . "/track — track a game\n"
+        . "/list — view tracked games\n"
+        . "/price — view game info\n"
+        . "/set — set target price\n"
+        . "/untrack — stop tracking\n"
+        . "/notify — toggle notifications\n"
+        . "/link — link web account\n"
+        . "/unlink — unlink from web account\n"
+        . "/cancel — cancel current command\n"
+        . '/help — show commands',
 
     'help' => "Available commands:\n"
-        ."/start — greeting\n"
-        ."/email — link email\n"
-        ."/search — find a game\n"
-        ."/track — track a game\n"
-        ."/list — view tracked games\n"
-        ."/price — view game info\n"
-        ."/set — set target price\n"
-        ."/untrack — stop tracking\n"
-        ."/notify — toggle notifications\n"
-        ."/cancel — cancel current command\n"
-        .'/help — show commands',
+        . "/start — greeting\n"
+        . "/email — link email\n"
+        . "/search — find a game\n"
+        . "/track — track a game\n"
+        . "/list — view tracked games\n"
+        . "/price — view game info\n"
+        . "/set — set target price\n"
+        . "/untrack — stop tracking\n"
+        . "/notify — toggle notifications\n"
+        . "/link — link web account\n"
+        . "/unlink — unlink from web account\n"
+        . "/cancel — cancel current command\n"
+        . '/help — show commands',
 
     // Email flow
     'email_current' => "Current email: :email\n\nEnter a new email to change it.\n\n/cancel to abort.",
@@ -80,4 +84,14 @@ return [
     'notify_disabled' => 'disabled',
     'notify_on' => 'on',
     'notify_off' => 'off',
+
+    // Link (web → telegram)
+    'link_usage' => 'Usage: /link ABC123',
+    'link_invalid' => 'Invalid or expired code. Get a new one on the website.',
+    'link_success' => 'Telegram linked to :email.',
+    'link_merged' => 'Telegram linked to :email. Your tracked games have been merged.',
+
+    // Unlink
+    'unlink_not_linked' => "You aren't linked to a web account. Nothing to unlink.",
+    'unlink_success' => "Telegram unlinked from :email.\nSend /start to create a new session.",
 ];

@@ -46,7 +46,7 @@ class TelegramPolling extends Command
 
     private function handleCancel(string $chatId): void
     {
-        Cache::forget('tg_state:'.$chatId);
+        Cache::forget('tg_state:' . $chatId);
         $this->sendReply($chatId, __('telegram.cancelled'));
     }
 
@@ -57,11 +57,11 @@ class TelegramPolling extends Command
         if (! $user) {
             $firstName = $message['chat']['first_name'] ?? '';
             $lastName = $message['chat']['last_name'] ?? '';
-            $name = trim($firstName.' '.$lastName) ?: 'Telegram User';
+            $name = trim($firstName . ' ' . $lastName) ?: 'Telegram User';
 
             $user = User::create([
                 'name' => $name,
-                'email' => 'tg_'.$chatId.'@telegram.local',
+                'email' => 'tg_' . $chatId . '@telegram.local',
                 'password' => bcrypt(bin2hex(random_bytes(8))),
                 'telegram_id' => $chatId,
             ]);
@@ -75,7 +75,7 @@ class TelegramPolling extends Command
         $user = $this->getUser($chatId);
         $currentEmail = $user->email ?? null;
 
-        Cache::put('tg_state:'.$chatId, 'awaiting_email', 300);
+        Cache::put('tg_state:' . $chatId, 'awaiting_email', 300);
 
         if ($currentEmail && ! str_starts_with($currentEmail, 'tg_')) {
             $reply = __('telegram.email_current', ['email' => $currentEmail]);
@@ -88,7 +88,7 @@ class TelegramPolling extends Command
 
     private function handleSearch(string $chatId): void
     {
-        Cache::put('tg_state:'.$chatId, 'awaiting_search', 300);
+        Cache::put('tg_state:' . $chatId, 'awaiting_search', 300);
         $this->sendReply($chatId, __('telegram.search_prompt'));
     }
 
@@ -103,7 +103,7 @@ class TelegramPolling extends Command
             return;
         }
 
-        $results = Cache::get('tg_search:'.$chatId);
+        $results = Cache::get('tg_search:' . $chatId);
 
         if (! $results || ! isset($results[$index])) {
             $this->sendReply($chatId, __('telegram.track_no_search'));
@@ -163,8 +163,8 @@ class TelegramPolling extends Command
             $reply .= __('telegram.list_item', [
                 'num' => $i + 1,
                 'title' => $t->game->title,
-                'price' => $t->game->current_price ? '$'.number_format($t->game->current_price, 2) : 'N/A',
-                'target' => $t->target_price ? '$'.number_format($t->target_price, 2) : __('telegram.target_unset'),
+                'price' => $t->game->current_price ? '$' . number_format($t->game->current_price, 2) : 'N/A',
+                'target' => $t->target_price ? '$' . number_format($t->target_price, 2) : __('telegram.target_unset'),
             ]);
         }
 
@@ -201,8 +201,8 @@ class TelegramPolling extends Command
 
         $this->sendReply($chatId, __('telegram.price_result', [
             'title' => $t->game->title,
-            'price' => $t->game->current_price ? '$'.number_format($t->game->current_price, 2) : 'N/A',
-            'target' => $t->target_price ? '$'.number_format($t->target_price, 2) : __('telegram.target_unset'),
+            'price' => $t->game->current_price ? '$' . number_format($t->game->current_price, 2) : 'N/A',
+            'target' => $t->target_price ? '$' . number_format($t->target_price, 2) : __('telegram.target_unset'),
         ]));
     }
 
@@ -315,11 +315,68 @@ class TelegramPolling extends Command
         $this->sendReply($chatId, __('telegram.help'));
     }
 
+    private function handleLink(string $chatId, string $text): void
+    {
+        $parts = explode(' ', trim($text));
+        $code = strtoupper($parts[1] ?? '');
+
+        if (!$code) {
+            $this->sendReply($chatId, __('telegram.link_usage'));
+            return;
+        }
+
+        $userId = Cache::get('tg_link:' . $code);
+
+        if (! $userId) {
+            $this->sendReply($chatId, __('telegram.link_invalid'));
+            return;
+        }
+
+        $webUser = User::find($userId);
+        if (! $webUser) {
+            $this->sendReply($chatId, __('telegram.link_invalid'));
+            return;
+        }
+
+        Cache::forget('tg_link:' . $code);
+
+        $phantom = User::where('telegram_id', $chatId)
+            ->where('id', '!=', $webUser->id)
+            ->first();
+
+        $merged = false;
+        if ($phantom) {
+            $phantom->trackedGames()->update(['user_id' => $webUser->id]);
+            $phantom->delete();
+            $merged = true;
+        }
+
+        $webUser->update(['telegram_id' => $chatId]);
+
+        $key = $merged ? 'telegram.link_merged' : 'telegram.link_success';
+        $this->sendReply($chatId, __($key, ['email' => $webUser->email]));
+    }
+
+    private function handleUnlink(string $chatId): void
+    {
+        $user = $this->getUser($chatId);
+
+        if (! $user) {
+            $this->sendReply($chatId, __('telegram.unlink_not_linked'));
+            return;
+        }
+
+        $email = $user->email;
+        $user->update(['telegram_id' => null]);
+
+        $this->sendReply($chatId, __('telegram.unlink_success', ['email' => $email]));
+    }
+
     public function handle()
     {
         $token = env('TELEGRAM_BOT_TOKEN');
         $offset = Cache::get('tg_offset', 0);
-        $url = "https://api.telegram.org/bot{$token}/getUpdates?offset=".($offset + 1);
+        $url = "https://api.telegram.org/bot{$token}/getUpdates?offset=" . ($offset + 1);
         $response = Http::get($url);
 
         if (! $response->ok()) {
@@ -353,10 +410,10 @@ class TelegramPolling extends Command
                 continue;
             }
 
-            $state = Cache::get('tg_state:'.$chatId);
+            $state = Cache::get('tg_state:' . $chatId);
 
             if ($state === 'awaiting_email') {
-                Cache::forget('tg_state:'.$chatId);
+                Cache::forget('tg_state:' . $chatId);
 
                 if (! filter_var($text, FILTER_VALIDATE_EMAIL)) {
                     $this->sendReply($chatId, __('telegram.email_invalid'));
@@ -373,7 +430,7 @@ class TelegramPolling extends Command
 
                 Mail::to($text)->send(new VerificationCodeMail($code));
 
-                Cache::put('tg_state:'.$chatId, 'awaiting_code', 600);
+                Cache::put('tg_state:' . $chatId, 'awaiting_code', 600);
 
                 $this->sendReply($chatId, __('telegram.email_code_sent'));
 
@@ -390,7 +447,7 @@ class TelegramPolling extends Command
                     continue;
                 }
 
-                Cache::forget('tg_state:'.$chatId);
+                Cache::forget('tg_state:' . $chatId);
                 Cache::forget("email_verify:{$code}");
 
                 $email = $data['email'];
@@ -407,7 +464,7 @@ class TelegramPolling extends Command
             }
 
             if ($state === 'awaiting_search') {
-                Cache::forget('tg_state:'.$chatId);
+                Cache::forget('tg_state:' . $chatId);
 
                 $results = SteamService::search($text);
 
@@ -418,7 +475,7 @@ class TelegramPolling extends Command
                 }
 
                 $results = array_slice($results, 0, 10);
-                Cache::put('tg_search:'.$chatId, $results, 300);
+                Cache::put('tg_search:' . $chatId, $results, 300);
 
                 $reply = '';
                 foreach ($results as $i => $game) {
@@ -451,8 +508,11 @@ class TelegramPolling extends Command
                 $this->handleNotify($chatId, $text);
             } elseif (str_starts_with($text, '/help')) {
                 $this->handleHelp($chatId);
+            } elseif (str_starts_with($text, '/link')) {
+                $this->handleLink($chatId, $text);
+            } elseif (str_starts_with($text, '/unlink')) {
+                $this->handleUnlink($chatId);
             }
-
             $this->info("Chat: {$chatId} | Message: {$text}");
         }
 
