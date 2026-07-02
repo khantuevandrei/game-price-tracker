@@ -27,4 +27,4 @@ Route::middleware('auth')->group(function () {
     Route::post('/telegram/unlink', [TelegramLinkController::class, 'unlink'])->name('telegram.unlink');
 });
 
-require __DIR__ . '/auth.php';
+require __DIR__.'/auth.php';
