@@ -12,7 +12,7 @@ use Illuminate\Console\Attributes\Signature;
 use Illuminate\Console\Command;
 
 #[Signature('prices:fetch')]
-#[Description('Command description')]
+#[Description('Fetch current Steam prices for tracked games and dispatch alerts on price drops')]
 class FetchPrices extends Command
 {
     public function handle()
