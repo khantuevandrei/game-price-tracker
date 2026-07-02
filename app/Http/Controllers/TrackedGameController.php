@@ -40,7 +40,7 @@ class TrackedGameController extends Controller
 
     public function edit(TrackedGame $trackedGame)
     {
-        if ($trackedGame->user->id !== auth()->id()) {
+        if ($trackedGame->user_id !== auth()->id()) {
             abort(403);
         }
 
@@ -49,7 +49,7 @@ class TrackedGameController extends Controller
 
     public function update(Request $request, TrackedGame $trackedGame)
     {
-        if ($trackedGame->user->id !== auth()->id()) {
+        if ($trackedGame->user_id !== auth()->id()) {
             abort(403);
         }
 
