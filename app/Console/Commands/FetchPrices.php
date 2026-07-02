@@ -49,7 +49,7 @@ class FetchPrices extends Command
                     ->get();
 
                 foreach ($trackedGames as $trackedGame) {
-                    SendPriceAlert::dispatchSync($trackedGame, $newPrice);
+                    SendPriceAlert::dispatch($trackedGame, $newPrice);
                     $this->info("Dispatched alert for {$trackedGame->user->email}");
                 }
 
