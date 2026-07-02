@@ -52,7 +52,7 @@ class SteamService
 
         $data = $response->json();
 
-        if ($data[$appId]['success'] !== true) {
+        if (! is_array($data) || empty($data[$appId]['success']) || empty($data[$appId]['data'])) {
             return [];
         }
 
