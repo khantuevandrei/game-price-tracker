@@ -12,6 +12,7 @@ use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\DB;
 
 #[Signature('app:telegram-polling')]
 #[Description('Poll Telegram Bot API for new messages and dispatch bot commands')]
@@ -337,22 +338,18 @@ class TelegramPolling extends Command
 
         if (! $code) {
             $this->sendReply($chatId, __('telegram.link_usage'));
-
             return;
         }
 
         $userId = Cache::get('tg_link:' . $code);
-
         if (! $userId) {
             $this->sendReply($chatId, __('telegram.link_invalid'));
-
             return;
         }
 
         $webUser = User::find($userId);
         if (! $webUser) {
             $this->sendReply($chatId, __('telegram.link_invalid'));
-
             return;
         }
 
@@ -363,17 +360,33 @@ class TelegramPolling extends Command
             ->first();
 
         $merged = false;
-        if ($phantom) {
-            $phantom->trackedGames()->update(['user_id' => $webUser->id]);
-            $phantom->delete();
-            $merged = true;
-        }
 
-        $webUser->update(['telegram_id' => $chatId]);
+        DB::transaction(function () use ($phantom, $webUser, $chatId, &$merged) {
+            if ($phantom) {
+                $webUserGameIds = $webUser->trackedGames()->pluck('game_id');
+
+                $phantom->trackedGames()
+                    ->whereIn('game_id', $webUserGameIds)
+                    ->delete();
+
+                $phantom->trackedGames()->update(['user_id' => $webUser->id]);
+
+                $webUser->update([
+                    'telegram_id' => $chatId,
+                    'locale'      => $webUser->locale ?? $phantom->locale,
+                ]);
+
+                $phantom->delete();
+                $merged = true;
+            } else {
+                $webUser->update(['telegram_id' => $chatId]);
+            }
+        });
 
         $key = $merged ? 'telegram.link_merged' : 'telegram.link_success';
         $this->sendReply($chatId, __($key, ['email' => $webUser->email]));
     }
+
 
     private function handleUnlink(string $chatId): void
     {
