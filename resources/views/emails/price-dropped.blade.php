@@ -1,4 +1,8 @@
-    <h1>Good news!</h1>
-    <p>{{ $trackedGame->game->title }} is now {{ $newPrice }} {{ $trackedGame->game->currency}}.</p>
-    <p>Your target was {{ $trackedGame->target_price }}.</p>
-    <p><a href="{{ url('/games/' . $trackedGame->game->steam_app_id) }}">View game</a></p>
+<h1>{{ __('alerts.mail_heading') }}</h1>
+<p>{{ __('alerts.mail_body', [
+    'game' => $trackedGame->game->title,
+    'price' => $newPrice,
+    'currency' => $trackedGame->game->currency,
+]) }}</p>
+<p>{{ __('alerts.mail_target', ['target' => $trackedGame->target_price]) }}</p>
+<p><a href="{{ url('/games/'.$trackedGame->game->steam_app_id) }}">{{ __('alerts.mail_cta') }}</a></p>

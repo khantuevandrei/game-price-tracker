@@ -42,6 +42,20 @@ class TelegramPolling extends Command
         return $user;
     }
 
+    private function applyLocale(array $message): void
+    {
+        $lang = substr($message['from']['language_code'] ?? 'en', 0, 2);
+        $lang = in_array($lang, ['en', 'ru'], true) ? $lang : 'en';
+
+        app()->setLocale($lang);
+
+        $tgId = $message['from']['id'] ?? null;
+        if ($tgId) {
+            \App\Models\User::where('telegram_id', $tgId)->update(['locale' => $lang]);
+        }
+    }
+
+
     private function getTrackedGames(User $user)
     {
         return $user->trackedGames()->with('game')->get();
@@ -371,12 +385,14 @@ class TelegramPolling extends Command
 
                 $phantom->trackedGames()->update(['user_id' => $webUser->id]);
 
+                $phantomLocale = $phantom->locale;
+                $phantom->delete();
+
                 $webUser->update([
                     'telegram_id' => $chatId,
-                    'locale'      => $webUser->locale ?? $phantom->locale,
+                    'locale'      => $webUser->locale ?? $phantomLocale,
                 ]);
 
-                $phantom->delete();
                 $merged = true;
             } else {
                 $webUser->update(['telegram_id' => $chatId]);

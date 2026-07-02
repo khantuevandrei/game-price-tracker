@@ -18,21 +18,25 @@ class SendPriceAlert implements ShouldQueue
 
     public function handle(): void
     {
-        if ($this->trackedGame->user->notify_email) {
-            Mail::to($this->trackedGame->user->email)->send(new PriceDroppedMail($this->trackedGame, $this->newPrice));
+        $user = $this->trackedGame->user;
+        $locale = $user->locale ?? config('app.fallback_locale', 'en');
+
+        $params = [
+            'game'   => $this->trackedGame->game->title,
+            'price'  => number_format($this->newPrice, 2),
+            'target' => number_format($this->trackedGame->target_price, 2),
+        ];
+
+        if ($user->notify_email) {
+            Mail::to($user->email)
+                ->locale($locale)
+                ->send(new PriceDroppedMail($this->trackedGame, $this->newPrice));
         }
 
-        if ($this->trackedGame->user->notify_telegram && $this->trackedGame->user->telegram_id) {
-            $token = config('services.telegram.token');
-            $chatId = $this->trackedGame->user->telegram_id;
-            $text = "Цена на {$this->trackedGame->game->title} упала до \$"
-                . number_format($this->newPrice, 2)
-                . ".\nТвоя цель: \$"
-                . number_format($this->trackedGame->target_price, 2);
-
-            Http::post("https://api.telegram.org/bot{$token}/sendMessage", [
-                'chat_id' => $chatId,
-                'text' => $text,
+        if ($user->notify_telegram && $user->telegram_id) {
+            Http::post('https://api.telegram.org/bot' . config('services.telegram.token') . '/sendMessage', [
+                'chat_id' => $user->telegram_id,
+                'text'    => __('alerts.price_dropped', $params, $locale),
             ]);
         }
     }
