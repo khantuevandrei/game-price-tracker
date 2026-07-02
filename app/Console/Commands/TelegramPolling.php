@@ -27,6 +27,13 @@ class TelegramPolling extends Command
         ]);
     }
 
+    private function applyLocale(array $message): void
+    {
+        $lang = $message['from']['language_code'] ?? 'en';
+        $lang = substr($lang, 0, 2);
+        app()->setLocale(in_array($lang, ['en', 'ru'], true) ? $lang : 'en');
+    }
+
     private function getUser(string $chatId): ?User
     {
         return User::where('telegram_id', $chatId)->first();
@@ -39,9 +46,8 @@ class TelegramPolling extends Command
 
     private function handleCancel(string $chatId): void
     {
-        Cache::forget('tg_state:'.$chatId);
-        $this->sendReply($chatId, 'Действие отменено.');
-
+        Cache::forget('tg_state:' . $chatId);
+        $this->sendReply($chatId, __('telegram.cancelled'));
     }
 
     private function handleStart(string $chatId, array $message): void
@@ -51,31 +57,17 @@ class TelegramPolling extends Command
         if (! $user) {
             $firstName = $message['chat']['first_name'] ?? '';
             $lastName = $message['chat']['last_name'] ?? '';
-            $name = trim($firstName.' '.$lastName) ?: 'Telegram User';
+            $name = trim($firstName . ' ' . $lastName) ?: 'Telegram User';
 
             $user = User::create([
                 'name' => $name,
-                'email' => 'tg_'.$chatId.'@telegram.local',
+                'email' => 'tg_' . $chatId . '@telegram.local',
                 'password' => bcrypt(bin2hex(random_bytes(8))),
                 'telegram_id' => $chatId,
             ]);
         }
 
-        $reply = "Привет! Это бот для отслеживания цен на игры в Steam.\n\n
-            Доступные команды:\n
-            /start - приветствие\n
-            /email - привязать email\n
-            /search - найти игру\n
-            /track - отслеживать игру\n
-            /list - посмотреть отслеживаемые игры\n
-            /price - посмотреть информацию об игре\n
-            /set - установить цель по цене\n
-            /untrack - прекратить отслеживание\n
-            /notify - вкл/откл уведомления\n
-            /cancel - отмена текущей команды\n
-            /help - показать команды";
-
-        $this->sendReply($chatId, $reply);
+        $this->sendReply($chatId, __('telegram.start'));
     }
 
     private function handleEmail(string $chatId): void
@@ -83,12 +75,12 @@ class TelegramPolling extends Command
         $user = $this->getUser($chatId);
         $currentEmail = $user->email ?? null;
 
-        Cache::put('tg_state:'.$chatId, 'awaiting_email', 300);
+        Cache::put('tg_state:' . $chatId, 'awaiting_email', 300);
 
         if ($currentEmail && ! str_starts_with($currentEmail, 'tg_')) {
-            $reply = "Текущий email: {$currentEmail}\n\nВведи новый email для смены.\n\n/cancel для отмены.";
+            $reply = __('telegram.email_current', ['email' => $currentEmail]);
         } else {
-            $reply = "Введи email.\n\n/cancel для отмены.";
+            $reply = __('telegram.email_prompt');
         }
 
         $this->sendReply($chatId, $reply);
@@ -96,9 +88,8 @@ class TelegramPolling extends Command
 
     private function handleSearch(string $chatId): void
     {
-        Cache::put('tg_state:'.$chatId, 'awaiting_search', 300);
-        $reply = "Введи название игры.\n\n/cancel для отмены.";
-        $this->sendReply($chatId, $reply);
+        Cache::put('tg_state:' . $chatId, 'awaiting_search', 300);
+        $this->sendReply($chatId, __('telegram.search_prompt'));
     }
 
     private function handleTrack(string $chatId, string $text): void
@@ -107,18 +98,14 @@ class TelegramPolling extends Command
         $index = (int) ($parts[1] ?? 0) - 1;
 
         if ($index < 0) {
-            $reply = 'Использование: /track 1';
-            $this->sendReply($chatId, $reply);
-
+            $this->sendReply($chatId, __('telegram.track_usage'));
             return;
         }
 
-        $results = Cache::get('tg_search:'.$chatId);
+        $results = Cache::get('tg_search:' . $chatId);
 
         if (! $results || ! isset($results[$index])) {
-            $reply = 'Сначала выполни поиск через /search';
-            $this->sendReply($chatId, $reply);
-
+            $this->sendReply($chatId, __('telegram.track_no_search'));
             return;
         }
 
@@ -128,16 +115,12 @@ class TelegramPolling extends Command
         $details = SteamService::getDetails($appId);
 
         if (empty($details)) {
-            $reply = 'Не удалось получить данные игры.';
-            $this->sendReply($chatId, $reply);
-
+            $this->sendReply($chatId, __('telegram.track_no_details'));
             return;
         }
 
         if (empty($details['price'])) {
-            $reply = 'Это бесплатная игра. Отслеживание не требуется.';
-            $this->sendReply($chatId, $reply);
-
+            $this->sendReply($chatId, __('telegram.track_free'));
             return;
         }
 
@@ -157,34 +140,32 @@ class TelegramPolling extends Command
 
         $user->trackedGames()->firstOrCreate(['game_id' => $gameModel->id]);
 
-        $reply = "{$game['title']} отслеживается.";
-        $this->sendReply($chatId, $reply);
+        $this->sendReply($chatId, __('telegram.track_success', ['title' => $game['title']]));
     }
 
     private function handleList(string $chatId): void
     {
         $user = $this->getUser($chatId);
-
         $trackedGames = $this->getTrackedGames($user);
 
         if ($trackedGames->isEmpty()) {
-            $reply = 'Игры не отслеживаются.';
-            $this->sendReply($chatId, $reply);
-
+            $this->sendReply($chatId, __('telegram.list_empty'));
             return;
         }
 
-        $reply = "Отслеживаемые игры:\n\n";
+        $reply = __('telegram.list_header');
         foreach ($trackedGames as $i => $t) {
-            $num = $i + 1;
-            $title = $t->game->title;
-            $price = $t->game->current_price ? '$'.number_format($t->game->current_price, 2) : 'N/A';
-            $target = $t->target_price ? '$'.number_format($t->target_price, 2) : 'не задано';
-            $reply .= "{$num}. {$title}\n Цена: {$price} | Цель: {$target}\n\n";
+            $reply .= __('telegram.list_item', [
+                'num' => $i + 1,
+                'title' => $t->game->title,
+                'price' => $t->game->current_price ? '$' . number_format($t->game->current_price, 2) : 'N/A',
+                'target' => $t->target_price ? '$' . number_format($t->target_price, 2) : __('telegram.target_unset'),
+            ]);
         }
 
         $this->sendReply($chatId, $reply);
     }
+
 
     private function handlePrice(string $chatId, string $text): void
     {
@@ -192,9 +173,7 @@ class TelegramPolling extends Command
         $index = (int) ($parts[1] ?? 0) - 1;
 
         if ($index < 0) {
-            $reply = 'Пример использования: /price 1';
-            $this->sendReply($chatId, $reply);
-
+            $this->sendReply($chatId, __('telegram.price_usage'));
             return;
         }
 
@@ -202,26 +181,22 @@ class TelegramPolling extends Command
         $trackedGames = $this->getTrackedGames($user);
 
         if ($trackedGames->isEmpty()) {
-            $reply = 'Игры не отслеживаются.';
-            $this->sendReply($chatId, $reply);
-
+            $this->sendReply($chatId, __('telegram.list_empty'));
             return;
         }
 
         if (! isset($trackedGames[$index])) {
-            $reply = 'Неверный номер. Используй /list чтобы увидеть номера.';
-            $this->sendReply($chatId, $reply);
-
+            $this->sendReply($chatId, __('telegram.invalid_index'));
             return;
         }
 
         $t = $trackedGames[$index];
-        $title = $t->game->title;
-        $price = $t->game->current_price ? '$'.number_format($t->game->current_price, 2) : 'N/A';
-        $target = $t->target_price ? '$'.number_format($t->target_price, 2) : 'не задано';
 
-        $reply = "{$title}\nЦена: {$price}\nЦель: {$target}";
-        $this->sendReply($chatId, $reply);
+        $this->sendReply($chatId, __('telegram.price_result', [
+            'title' => $t->game->title,
+            'price' => $t->game->current_price ? '$' . number_format($t->game->current_price, 2) : 'N/A',
+            'target' => $t->target_price ? '$' . number_format($t->target_price, 2) : __('telegram.target_unset'),
+        ]));
     }
 
     private function handleSet(string $chatId, string $text): void
@@ -231,9 +206,7 @@ class TelegramPolling extends Command
         $targetPrice = (float) ($parts[2] ?? 0);
 
         if ($index < 0 || $targetPrice <= 0) {
-            $reply = 'Пример использования: /set 1 15.99';
-            $this->sendReply($chatId, $reply);
-
+            $this->sendReply($chatId, __('telegram.set_usage'));
             return;
         }
 
@@ -241,24 +214,22 @@ class TelegramPolling extends Command
         $trackedGames = $this->getTrackedGames($user);
 
         if ($trackedGames->isEmpty()) {
-            $reply = 'Игры не отслеживаются.';
-            $this->sendReply($chatId, $reply);
-
+            $this->sendReply($chatId, __('telegram.list_empty'));
             return;
         }
 
         if (! isset($trackedGames[$index])) {
-            $reply = 'Неверный номер. Используй /list чтобы увидеть номера.';
-            $this->sendReply($chatId, $reply);
-
+            $this->sendReply($chatId, __('telegram.invalid_index'));
             return;
         }
 
         $trackedGame = $trackedGames[$index];
         $trackedGame->update(['target_price' => $targetPrice]);
 
-        $reply = "Цель для {$trackedGame->game->title} установлена: \$".number_format($targetPrice, 2);
-        $this->sendReply($chatId, $reply);
+        $this->sendReply($chatId, __('telegram.set_success', [
+            'title' => $trackedGame->game->title,
+            'price' => number_format($targetPrice, 2),
+        ]));
     }
 
     private function handleUntrack(string $chatId, string $text): void
@@ -267,9 +238,7 @@ class TelegramPolling extends Command
         $index = (int) ($parts[1] ?? 0) - 1;
 
         if ($index < 0) {
-            $reply = 'Пример использования: /untrack 1';
-            $this->sendReply($chatId, $reply);
-
+            $this->sendReply($chatId, __('telegram.untrack_usage'));
             return;
         }
 
@@ -277,24 +246,20 @@ class TelegramPolling extends Command
         $trackedGames = $this->getTrackedGames($user);
 
         if ($trackedGames->isEmpty()) {
-            $reply = 'Игры не отслеживаются.';
-            $this->sendReply($chatId, $reply);
-
+            $this->sendReply($chatId, __('telegram.list_empty'));
             return;
         }
 
         if (! isset($trackedGames[$index])) {
-            $reply = 'Неверный номер. Используй /list чтобы увидеть номера.';
-            $this->sendReply($chatId, $reply);
-
+            $this->sendReply($chatId, __('telegram.invalid_index'));
             return;
         }
 
         $trackedGame = $trackedGames[$index];
+        $title = $trackedGame->game->title;
         $trackedGame->delete();
 
-        $reply = "{$trackedGame->game->title} больше не отслеживается.";
-        $this->sendReply($chatId, $reply);
+        $this->sendReply($chatId, __('telegram.untrack_success', ['title' => $title]));
     }
 
     private function handleNotify(string $chatId, string $text): void
@@ -302,8 +267,7 @@ class TelegramPolling extends Command
         $user = $this->getUser($chatId);
 
         if (! $user) {
-            $this->sendReply($chatId, 'Сначала используй /start');
-
+            $this->sendReply($chatId, __('telegram.notify_need_start'));
             return;
         }
 
@@ -313,95 +277,72 @@ class TelegramPolling extends Command
         switch ($type) {
             case 'email':
                 $user->update(['notify_email' => ! $user->notify_email]);
-                $status = $user->fresh()->notify_email ? 'включены' : 'отключены';
-                $this->sendReply($chatId, "Email уведомления {$status}.");
+                $status = $user->fresh()->notify_email ? __('telegram.notify_enabled') : __('telegram.notify_disabled');
+                $this->sendReply($chatId, __('telegram.notify_email_toggled', ['status' => $status]));
                 break;
             case 'telegram':
                 $user->update(['notify_telegram' => ! $user->notify_telegram]);
-                $status = $user->fresh()->notify_telegram ? 'включены' : 'отключены';
-                $this->sendReply($chatId, "Telegram уведомления {$status}.");
+                $status = $user->fresh()->notify_telegram ? __('telegram.notify_enabled') : __('telegram.notify_disabled');
+                $this->sendReply($chatId, __('telegram.notify_telegram_toggled', ['status' => $status]));
                 break;
             default:
                 if ($type !== null) {
-                    $this->sendReply($chatId, 'Неверный параметр. Используй: /notify email, /notify telegram, /notify');
+                    $this->sendReply($chatId, __('telegram.notify_invalid_param'));
                 } else {
-                    $email = $user->notify_email ? 'вкл' : 'откл';
-                    $telegram = $user->notify_telegram ? 'вкл' : 'откл';
-                    $this->sendReply($chatId, "Email: {$email}\nTelegram: {$telegram}");
-                    break;
+                    $email = $user->notify_email ? __('telegram.notify_on') : __('telegram.notify_off');
+                    $telegram = $user->notify_telegram ? __('telegram.notify_on') : __('telegram.notify_off');
+                    $this->sendReply($chatId, __('telegram.notify_status', ['email' => $email, 'telegram' => $telegram]));
                 }
         }
     }
 
     private function handleHelp(string $chatId): void
     {
-        $reply = "Доступные команды:\n
-            /start - приветствие\n
-            /email - привязать email\n
-            /search - найти игру\n
-            /track - отслеживать игру\n
-            /list - посмотреть отслеживаемые игры\n
-            /price - посмотреть информацию об игре\n
-            /set - установить цель по цене\n
-            /untrack - прекратить отслеживание\n
-            /notify - вкл/откл уведомления\n
-            /cancel - отмена текущей команды\n
-            /help - показать команды";
-
-        $this->sendReply($chatId, $reply);
+        $this->sendReply($chatId, __('telegram.help'));
     }
 
     public function handle()
     {
-        // 1. Получение обновлений от Telegram
         $token = env('TELEGRAM_BOT_TOKEN');
         $offset = Cache::get('tg_offset', 0);
-        $url = "https://api.telegram.org/bot{$token}/getUpdates?offset=".($offset + 1);
+        $url = "https://api.telegram.org/bot{$token}/getUpdates?offset=" . ($offset + 1);
         $response = Http::get($url);
 
-        // 2. Проверка успешности запроса
         if (! $response->ok()) {
             $this->error('Telegram API error');
-
             return Command::FAILURE;
         }
 
-        // 3. Если нет новых сообщений — выход
         $updates = $response->json('result');
 
         if (empty($updates)) {
             $this->info('No new messages');
-
             return Command::SUCCESS;
         }
 
-        // 4. Обработка каждого сообщения
         foreach ($updates as $update) {
             $message = $update['message'] ?? null;
             if (! $message) {
                 continue;
             }
 
+            $this->applyLocale($message);
+
             $chatId = $message['chat']['id'];
             $text = $message['text'] ?? '';
 
             if (str_starts_with($text, '/cancel')) {
                 $this->handleCancel($chatId);
-
                 continue;
             }
 
-            // 4.1. Проверка состояния пользователя
-            $state = Cache::get('tg_state:'.$chatId);
+            $state = Cache::get('tg_state:' . $chatId);
 
-            // Бот ждёт, что пользователь введёт email
             if ($state === 'awaiting_email') {
-                Cache::forget('tg_state:'.$chatId);
+                Cache::forget('tg_state:' . $chatId);
 
                 if (! filter_var($text, FILTER_VALIDATE_EMAIL)) {
-                    $message = 'Неверный формат email. Попробуй /email еще раз.';
-                    $this->sendReply($chatId, $message);
-
+                    $this->sendReply($chatId, __('telegram.email_invalid'));
                     continue;
                 }
 
@@ -414,27 +355,22 @@ class TelegramPolling extends Command
 
                 Mail::to($text)->send(new VerificationCodeMail($code));
 
-                Cache::put('tg_state:'.$chatId, 'awaiting_code', 600);
+                Cache::put('tg_state:' . $chatId, 'awaiting_code', 600);
 
-                $reply = 'На твой email отправлен код. Введи его.';
-                $this->sendReply($chatId, $reply);
-
+                $this->sendReply($chatId, __('telegram.email_code_sent'));
                 continue;
             }
 
-            // Бот ждёт код подтверждения
             if ($state === 'awaiting_code') {
                 $code = trim($text);
                 $data = Cache::get("email_verify:{$code}");
 
                 if (! $data || $data['chat_id'] !== $chatId) {
-                    $reply = "Неверный код. Попробуй еще раз.\n\n/cancel для отмены.";
-                    $this->sendReply($chatId, $reply);
-
+                    $this->sendReply($chatId, __('telegram.email_code_invalid'));
                     continue;
                 }
 
-                Cache::forget('tg_state:'.$chatId);
+                Cache::forget('tg_state:' . $chatId);
                 Cache::forget("email_verify:{$code}");
 
                 $email = $data['email'];
@@ -445,40 +381,33 @@ class TelegramPolling extends Command
                 $password = substr(bin2hex(random_bytes(4)), 0, 8);
                 $user->update(['password' => bcrypt($password)]);
 
-                $reply = "Почта привязана.\nНовый пароль для входа на сайт: {$password}";
-                $this->sendReply($chatId, $reply);
-
+                $this->sendReply($chatId, __('telegram.email_linked', ['password' => $password]));
                 continue;
             }
 
-            // Бот ждёт название игры для поиска
             if ($state === 'awaiting_search') {
-                Cache::forget('tg_state:'.$chatId);
+                Cache::forget('tg_state:' . $chatId);
 
                 $results = SteamService::search($text);
 
                 if (empty($results)) {
-                    $this->sendReply($chatId, 'Ничего не найдено.');
-
+                    $this->sendReply($chatId, __('telegram.search_no_results'));
                     continue;
                 }
 
                 $results = array_slice($results, 0, 10);
-                Cache::put('tg_search:'.$chatId, $results, 300);
+                Cache::put('tg_search:' . $chatId, $results, 300);
 
                 $reply = '';
                 foreach ($results as $i => $game) {
-                    $num = $i + 1;
-                    $reply .= "{$num}. {$game['title']}\n";
+                    $reply .= __('telegram.search_result_item', ['num' => $i + 1, 'title' => $game['title']]);
                 }
-                $reply .= "\nВведи /track 1 чтобы добавить в отслеживание.";
+                $reply .= __('telegram.search_footer');
 
                 $this->sendReply($chatId, $reply);
-
                 continue;
             }
 
-            // 4.2. Обработка команд
             if (str_starts_with($text, '/start')) {
                 $this->handleStart($chatId, $message);
             } elseif (str_starts_with($text, '/email')) {
@@ -504,7 +433,6 @@ class TelegramPolling extends Command
             $this->info("Chat: {$chatId} | Message: {$text}");
         }
 
-        // 5. Сохранение последнего обработанного update_id
         if (! empty($updates)) {
             $lastUpdate = end($updates);
             Cache::put('tg_offset', $lastUpdate['update_id'], 86400);

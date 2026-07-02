@@ -15,6 +15,18 @@ class TelegramBotTest extends TestCase
 {
     use RefreshDatabase;
 
+    public function test_start_command_returns_english_by_default(): void
+    {
+        app()->setLocale('en');
+        $this->assertStringContainsString('Hi!', __('telegram.start'));
+    }
+
+    public function test_start_command_returns_russian_for_ru_locale(): void
+    {
+        app()->setLocale('ru');
+        $this->assertStringContainsString('Привет!', __('telegram.start'));
+    }
+
     protected function setUp(): void
     {
         parent::setUp();
